@@ -117,33 +117,52 @@ class GenericLoadElm extends CircuitElm {
 	return f > 0 ? "partly on (brownout)" : "off (under voltage)";
     }
 
-    Point body[];
+    static final int SIZE = 28;    // square body, corner radius below
+    static final int RADIUS = 5;
+    Point body[], plus;
+
+    // +1/-1: the side (for interpPoint offsets) away from the value label,
+    // which drawValues() puts above horizontal parts and right of vertical ones
+    int freeSide() {
+	if (dy == 0) return dx > 0 ? -1 : 1;
+	if (dx == 0) return dy > 0 ? -1 : 1;
+	return -1;
+    }
+
     void setPoints() {
 	super.setPoints();
-	calcLeads(36);
+	calcLeads(SIZE);
 	body = newPointArray(4);
-	interpPoint2(lead1, lead2, body[0], body[1], 0, 13);
-	interpPoint2(lead1, lead2, body[3], body[2], 1, 13);
+	interpPoint2(lead1, lead2, body[0], body[1], 0, SIZE/2);
+	interpPoint2(lead1, lead2, body[3], body[2], 1, SIZE/2);
+	// + sits just outside the body's corner at the pin-1 end, so it stays put however long the leads are
+	plus = interpPoint(lead1, lead2, -7/(double) SIZE, freeSide()*(SIZE/2 + 4));
+    }
+
+    // closed path through the four corners with rounded corners (works at any angle)
+    void roundedBodyPath(Graphics g) {
+	Point m = new Point((body[0].x + body[1].x)/2, (body[0].y + body[1].y)/2);
+	g.context.beginPath();
+	g.context.moveTo(m.x, m.y);
+	int i;
+	for (i = 1; i <= 4; i++) {
+	    Point a = body[i % 4], b = body[(i + 1) % 4];
+	    g.context.arcTo(a.x, a.y, b.x, b.y, RADIUS);
+	}
+	g.context.closePath();
     }
 
     void draw(Graphics g) {
-	setBbox(point1, point2, 15);
+	setBbox(point1, point2, SIZE/2 + 2);
+	adjustBbox(plus, plus);
 	draw2Leads(g);
 	double f = onFraction(getVoltageDiff());
-	Polygon p = new Polygon();
-	int i;
-	for (i = 0; i != 4; i++)
-	    p.addPoint(body[i].x, body[i].y);
-	g.setColor(IoTag.tint(IoTag.GREEN, .12 + .88*f));
-	g.fillPolygon(p);
 	g.context.save();
+	roundedBodyPath(g);
+	g.context.setFillStyle(IoTag.tint(IoTag.GREEN, .12 + .88*f).getHexValue());
+	g.context.fill();
 	g.context.setStrokeStyle((needsHighlight() ? selectColor : lightGrayColor).getHexValue());
-	g.context.setLineWidth(1.5);
-	g.context.beginPath();
-	g.context.moveTo(body[0].x, body[0].y);
-	for (i = 1; i != 4; i++)
-	    g.context.lineTo(body[i].x, body[i].y);
-	g.context.closePath();
+	g.context.setLineWidth(3);   // same weight as the resistor body
 	g.context.stroke();
 	g.context.restore();
 
@@ -153,13 +172,12 @@ class GenericLoadElm extends CircuitElm {
 	g.setFont(new Font("SansSerif", Font.BOLD, 8));
 	drawCenteredText(g, "LOAD", c.x, c.y, true);
 	// + marks pin 1
-	Point plus = interpPoint(point1, lead1, .5, 10);
-	g.setFont(new Font("SansSerif", 0, 11));
+	g.setFont(new Font("SansSerif", Font.BOLD, 11));
 	drawCenteredText(g, "+", plus.x, plus.y, true);
 	g.setFont(old);
 
 	if (sim.showValuesCheckItem.getState())
-	    drawValues(g, getShortUnitText(iLoad, "A"), 15);
+	    drawValues(g, getShortUnitText(iLoad, "A"), SIZE/2 + 1);
 	doDots(g);
 	drawPosts(g);
     }
