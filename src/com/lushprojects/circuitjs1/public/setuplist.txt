@@ -1,6 +1,7 @@
 ### setuplist.txt first line must be a comment
 +Kjerag Labs
 >ratings-demo.txt Component Ratings Demo
+tolerance-demo.txt Tolerance Testing Demo
 -
 +Basics
 ohms.txt Ohm's Law

@@ -1,0 +1,12 @@
+$ 1 5e-6 10.2 50 5 50 5e-11
+R 192 96 192 48 0 0 40 5 0 0 0.5
+r 192 96 192 224 0 10000
+906 5 0
+r 192 224 192 352 0 4700
+906 5 0
+g 192 352 192 384 0
+w 192 224 336 224 0
+903 336 224 416 224 0 1.55 1.65 3.3 0 40000
+x 128 432 466 435 4 14 Divider\s=\s1.60\sV\sat\snominal.\sThe\sinput\sswitches\sat\s1.55\s/\s1.65\sV.
+x 128 456 491 459 4 14 Try\sthe\s▲▼\sswitches:\sworst\scase\sreads\sH\sor\sL\sinstead\sof\s?
+907 1
