@@ -14,6 +14,13 @@ can be given a max power, max voltage and max current in their edit dialog
   CircuitJS ignores these lines, so files work in both versions.
 * New resistors default to 0.25 W. New LEDs default to 30 mA and 5 V reverse.
 
+**Sharing circuits**
+
+* File > Export As Link puts the whole circuit in the URL: `https://circuits.kjeraglabs.no/?ctz=...`
+* Premade circuits: save a circuit as `war/shared/<name>.txt` and push. It opens at
+  `https://circuits.kjeraglabs.no/<name>`. This works through `404.html`, which `build.sh`
+  makes from the main page, so the site must be served from the domain root.
+
 Build with `./build.sh` (needs Java 17+). The site to upload ends up in `dist/`.
 Pushing to `master` on GitHub builds and deploys automatically (`.github/workflows/deploy.yml`).
 

@@ -21,4 +21,8 @@ mkdir dist
 (cd war && tar --exclude=WEB-INF -cf - .) | (cd dist && tar -xf -)
 # serve the simulator at the site root
 cp dist/circuitjs.html dist/index.html
+# GitHub Pages serves 404.html for unknown paths, so /led-demo opens the app,
+# which then loads shared/led-demo.txt.  <base href="/"> keeps asset paths
+# working at any path depth.
+sed 's|<head>|<head><base href="/">|' dist/circuitjs.html > dist/404.html
 echo "Site ready in ./dist"

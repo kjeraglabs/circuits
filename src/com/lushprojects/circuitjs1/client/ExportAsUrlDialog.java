@@ -95,7 +95,11 @@ public class ExportAsUrlDialog extends DialogBox {
 		super();
 		String start[] = Location.getHref().split("\\?");
 		String query="?ctz=" + compress(dump);
-		dump = start[0] + query;
+		String base = start[0];
+		// on a named-circuit page like /led-demo, link to the site root instead
+		if (CirSim.getSharedCircuitName(Location.getPath()) != null)
+		    base = GWT.getHostPageBaseURL();
+		dump = base + query;
 		requrl = URL.encodeQueryString(query);
 		Button okButton, copyButton;
 	

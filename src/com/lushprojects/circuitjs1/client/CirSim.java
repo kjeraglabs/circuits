@@ -341,6 +341,8 @@ MouseOutHandler, MouseWheelHandler {
     String startLabel = null;
     String startCircuitText = null;
     String startCircuitLink = null;
+    // name from a pretty path like /led-demo, loaded from shared/<name>.txt
+    String sharedCircuit = null;
 //    String baseURL = "http://www.falstad.com/circuit/";
     
     public void init() {
@@ -376,6 +378,8 @@ MouseOutHandler, MouseWheelHandler {
 	    startCircuit = qp.getValue("startCircuit");
 	    startLabel   = qp.getValue("startLabel");
 	    startCircuitLink = qp.getValue("startCircuitLink");
+	    if (startCircuitText == null && startCircuit == null && startCircuitLink == null)
+		sharedCircuit = getSharedCircuitName(Window.Location.getPath());
 	    euroRes = qp.getBooleanValue("euroResistors", false);
 	    usRes = qp.getBooleanValue("usResistors",  false);
 	    running = qp.getBooleanValue("running", true);
@@ -694,6 +698,10 @@ MouseOutHandler, MouseWheelHandler {
 		getSetupList(false);
 		ImportFromDropboxDialog.setSim(this);
 		ImportFromDropboxDialog.doImportDropboxLink(startCircuitLink, false);
+	    } else if (sharedCircuit != null) {
+		readCircuit("");
+		getSetupList(false);
+		loadSharedCircuit(sharedCircuit);
 	    } else {
 		readCircuit("");
 		if (stopMessage == null && startCircuit != null) {
@@ -3499,6 +3507,44 @@ MouseOutHandler, MouseWheelHandler {
 		unsavedChanges = false;
 	}
 	
+	// "/led-demo" or "/led-demo/" -> "led-demo".  Anything else (root, index.html, deeper paths) -> null
+	static String getSharedCircuitName(String path) {
+	    if (path == null)
+		return null;
+	    if (path.endsWith("/"))
+		path = path.substring(0, path.length()-1);
+	    if (!path.matches("/[A-Za-z0-9_-]{1,64}"))
+		return null;
+	    return path.substring(1);
+	}
+
+	// load shared/<name>.txt from the site root; fall back to the default circuit if it's missing
+	void loadSharedCircuit(final String name) {
+	    String url = GWT.getHostPageBaseURL() + "shared/" + name + ".txt?v=" + random.nextInt();
+	    RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, url);
+	    try {
+		requestBuilder.sendRequest(null, new RequestCallback() {
+		    public void onError(Request request, Throwable exception) {
+			Window.alert(LS("Can't load circuit!"));
+			getSetupList(true);
+		    }
+		    public void onResponseReceived(Request request, Response response) {
+			if (response.getStatusCode() == Response.SC_OK) {
+			    readCircuit(response.getText(), RC_KEEP_TITLE);
+			    titleLabel.setText(name.replace('-', ' ').replace('_', ' '));
+			    allowSave(false);
+			    unsavedChanges = false;
+			} else {
+			    Window.alert("No circuit called \"" + name + "\" here. Showing the default circuit.");
+			    getSetupList(true);
+			}
+		    }
+		});
+	    } catch (RequestException e) {
+		getSetupList(true);
+	    }
+	}
+
 	void loadFileFromURL(String url) {
 	    RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, url);
 	    
