@@ -128,7 +128,7 @@ class Toolbar extends FlowPanel {
 	addPart("Generic load", new String[] { "GenericLoadElm" }, new String[] { loadIcon });
 	addPart("I/O pins", new String[] { "DigitalInputElm", "AnalogInputElm", "DigitalOutputElm", "AnalogOutputElm" },
 		new String[] { dinIcon, ainIcon, doutIcon, aoutIcon });
-	addPart("Voltmeter", new String[] { "ProbeElm" }, new String[] { voltmeterIcon });
+	addPart("Meters", new String[] { "ProbeElm", "AmmeterElm" }, new String[] { voltmeterIcon, ammeterIcon });
 	addPart("Net label", new String[] { "LabeledNodeElm" }, new String[] { labelIcon });
     }
 
@@ -375,6 +375,9 @@ class Toolbar extends FlowPanel {
 	"<circle cx='17.5' cy='18.8' r='.8' fill='currentColor'/></svg>";
     static final String toleranceIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>" +
 	"<path d='M1 15h3l1-2.5 2 5 2-5 2 5 2-5 1 2.5h3'/><path d='M20 3v6M17 6h6M17 12h6'/></g></svg>";
+    static final String ammeterIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round'>" +
+	"<path d='M12 1v4M12 19v4'/><circle cx='12' cy='12' r='7'/></g>" +
+	"<text x='12' y='15.6' font-size='10' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='currentColor'>A</text></svg>";
     static final String labelIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>" +
 	"<path d='M1 12h4'/><path d='M5 8h12l5 4-5 4H5z'/></g></svg>";
 

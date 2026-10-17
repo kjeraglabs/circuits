@@ -49,7 +49,7 @@ class DigitalInputElm extends CircuitElm {
 
     int getDumpType() { return 903; }
     String dump() { return super.dump() + " " + vil + " " + vih + " " + vdd + " " + pull + " " + pullR; }
-    int getShortcut() { return 'I'; }
+    int getShortcut() { return 0; }
     int getPostCount() { return 1; }
     boolean supportsRatings() { return true; }
     double getVoltageDiff() { return volts[0]; }

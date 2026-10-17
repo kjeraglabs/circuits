@@ -39,7 +39,7 @@ package com.lushprojects.circuitjs1.client;
 
     public AmmeterElm(int xx, int yy) { 
         super(xx, yy); 
-        flags = FLAG_SHOWCURRENT;
+        flags = FLAG_SHOWCURRENT | FLAG_CIRCLE;
         scale = SCALE_AUTO;
     }
     public AmmeterElm(int xa, int ya, int xb, int yb, int f,
@@ -66,10 +66,15 @@ package com.lushprojects.circuitjs1.client;
     void setPoints(){
         super.setPoints();
         mid = interpPoint(point1,point2,0.6);
+        ctr = interpPoint(point1,point2,0.5);
         arrowPoly = calcArrow(point1, mid, 14, 7);
     }
-    Point mid;
+    Point mid, ctr;
     static final int FLAG_SHOWCURRENT = 1;
+    static final int FLAG_CIRCLE = 2;   // draw as a circle with A (same flag as pfalstad/circuitjs1)
+    final int circleSize = 12;
+    boolean drawAsCircle() { return (flags & FLAG_CIRCLE) != 0; }
+    int getShortcut() { return 'I'; }
     void stepFinished(){
         count++;//how many counts are in a cycle    
         total += current*current; //sum of squares
@@ -142,11 +147,42 @@ package com.lushprojects.circuitjs1.client;
     Polygon arrowPoly;
     void draw(Graphics g) {
         super.draw(g);//BC required for highlighting
+        double width = 4;
         setVoltageColor(g, volts[0]);
-        drawThickLine(g, point1, point2);
-        g.fillPolygon(arrowPoly);
-        doDots(g);
-        setBbox(point1, point2, 3);
+        if (!drawAsCircle()) {
+            drawThickLine(g, point1, point2);
+            g.fillPolygon(arrowPoly);
+        } else {
+            calcLeads(circleSize*2);
+            drawThickLine(g, point1, lead1);
+            drawThickLine(g, lead2, point2);
+            g.setColor(needsHighlight() ? selectColor : lightGrayColor);
+            drawThickCircle(g, ctr.x, ctr.y, circleSize);
+            g.setFont(new Font("SansSerif", 0, 14));
+            drawCenteredText(g, "A", ctr.x, ctr.y, true);
+            // + marks the terminal where conventional current enters
+            g.setColor(whiteColor);
+            g.setFont(unitsFont);
+            double len = circleSize*2;
+            Point plusPoint = interpPoint(point1, point2, (dn/2-len/2-4)/dn, -10*dsign);
+            if (y2 > y)
+                plusPoint.y += 4;
+            if (y > y2)
+                plusPoint.y += 3;
+            int w = (int) g.context.measureText("+").getWidth();
+            g.drawString("+", plusPoint.x-w/2, plusPoint.y);
+            width = circleSize;
+        }
+        if (drawAsCircle()) {
+            // keep the moving dots on the leads so they don't cover the A
+            updateDotCount();
+            if (sim.dragElm != this) {
+                drawDots(g, point1, lead1, curcount);
+                drawDots(g, lead2, point2, curcount);
+            }
+        } else
+            doDots(g);
+        setBbox(point1, point2, width);
         String s = "A";
         switch (meter) {
         case AM_VOL:
@@ -157,7 +193,7 @@ package com.lushprojects.circuitjs1.client;
             break;
         }
 
-        drawValues(g, s, 4);
+        drawValues(g, s, drawAsCircle() ? circleSize+3 : 4);
         drawPosts(g);
     }
     int getDumpType() { return 370; }

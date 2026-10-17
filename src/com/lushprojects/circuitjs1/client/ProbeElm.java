@@ -23,6 +23,9 @@ package com.lushprojects.circuitjs1.client;
 
 class ProbeElm extends CircuitElm {
     static final int FLAG_SHOWVOLTAGE = 1;
+    static final int FLAG_CIRCLE = 2;   // draw as a circle with V (same flag as pfalstad/circuitjs1)
+    final int circleSize = 12;
+    boolean drawAsCircle() { return (flags & FLAG_CIRCLE) != 0; }
     int meter;
     int units;
     int scale;
@@ -41,7 +44,7 @@ class ProbeElm extends CircuitElm {
     	meter = TP_VOL;
     	
     	// default for new elements
-    	flags = FLAG_SHOWVOLTAGE;
+    	flags = FLAG_SHOWVOLTAGE | FLAG_CIRCLE;
     	scale = SCALE_AUTO;
     }
     public ProbeElm(int xa, int ya, int xb, int yb, int f,
@@ -109,10 +112,13 @@ class ProbeElm extends CircuitElm {
 	
 
     void draw(Graphics g) {
-	int hs = 8;
+	boolean showCircle = drawAsCircle() && this != sim.plotXElm && this != sim.plotYElm;
+	int hs = showCircle ? circleSize : 8;
 	setBbox(point1, point2, hs);
 	boolean selected = needsHighlight();
 	double len = (selected || sim.dragElm == this || mustShowVoltage()) ? 16 : dn-32;
+	if (showCircle)
+	    len = circleSize*2;
 	calcLeads((int) len);
 	setVoltageColor(g, volts[0]);
 	if (selected)
@@ -162,9 +168,9 @@ class ProbeElm extends CircuitElm {
 	                s = showFormat.format(dutyCycle);
 	                break;
 	        }
-	    drawValues(g, s, 4);
+	    drawValues(g, s, showCircle ? circleSize+3 : 4);
 	}
-	   g.setColor(Color.white);
+	   g.setColor(whiteColor);
            g.setFont(unitsFont);
            Point plusPoint = interpPoint(point1, point2, (dn/2-len/2-4)/dn, -10*dsign );
            if (y2 > y)
@@ -173,6 +179,12 @@ class ProbeElm extends CircuitElm {
 		plusPoint.y += 3;
            int w = (int)g.context.measureText("+").getWidth();;
            g.drawString("+", plusPoint.x-w/2, plusPoint.y);
+           if (showCircle) {
+               g.setColor(needsHighlight() ? selectColor : lightGrayColor);
+               drawThickCircle(g, center.x, center.y, circleSize);
+               g.setFont(new Font("SansSerif", 0, 14));
+               drawCenteredText(g, "V", center.x, center.y, true);
+           }
 	drawPosts(g);
     }
 

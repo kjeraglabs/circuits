@@ -23,7 +23,7 @@ can be given a max power, max voltage and max current in their edit dialog
 * **Generic load** (`L`): runs between a min and max supply voltage and then draws a set
   current. Green when on. Below the minimum it is off (brownout), above the maximum it shuts
   off. A weak supply leaves it partly on. Pin 1 is marked +.
-* **Digital input** (`I`): reads its pin against VIL/VIH and shows H, L or ? (in between).
+* **Digital input**: reads its pin against VIL/VIH and shows H, L or ? (in between).
   Optional internal pull-up (to VDD) or pull-down with a resistor value; 0 ohms means none.
   New inputs are rated 3.6 V, so 5 V burns a 3.3 V pin.
 * **Digital output** (`O`): click to switch ON/OFF. For each state choose drive high, drive low
@@ -60,7 +60,8 @@ hover or tap. Options > Toolbar hides it. Part icons come from Paul Falstad's to
 | Key | Does |
 |---|---|
 | `v` | voltage source (1-terminal) |
-| `V` | voltmeter (2-terminal probe) |
+| `V` | voltmeter (circle with V) |
+| `I` | ammeter (circle with A) |
 | `b` | battery (2-terminal voltage source) |
 | `a` | op amp |
 | `A` | op amp with V+ / V- supply pins |
@@ -68,7 +69,6 @@ hover or tap. Options > Toolbar hides it. Part icons come from Paul Falstad's to
 | `D` | LED (moved from `l`) |
 | `i` | inductor (moved from `L`) |
 | `L` | generic load |
-| `I` | digital input pin |
 | `O` | digital output pin |
 | `U` | analog output pin |
 | `r` | rotate 90 degrees |
