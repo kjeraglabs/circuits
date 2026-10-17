@@ -1,9 +1,12 @@
-# Builds the simulator and publishes it to GitHub Pages on every push to master.
+# Builds the site and publishes it to GitHub Pages.
+#   main -> https://circuits.kjeraglabs.no/       (live)
+#   dev  -> https://circuits.kjeraglabs.no/dev/   (staging, for testing before merging to main)
+# A push to either branch rebuilds both, since Pages hosts one site per repo.
 name: Build and deploy
 
 on:
   push:
-    branches: [master]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -20,16 +23,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-      - run: ./build.sh
+
+      - name: Build live site (main)
+        run: |
+          ./build.sh
+          mv dist "$RUNNER_TEMP/site"
+
+      - name: Build staging site (dev)
+        run: |
+          if git rev-parse --verify --quiet origin/dev > /dev/null; then
+            git worktree add --detach "$RUNNER_TEMP/dev-src" origin/dev
+            ln -s "$PWD/.gwt" "$RUNNER_TEMP/dev-src/.gwt"
+            (cd "$RUNNER_TEMP/dev-src" && STAGING=1 ./build.sh)
+            mv "$RUNNER_TEMP/dev-src/dist" "$RUNNER_TEMP/site/dev"
+            # GitHub Pages only uses the root 404.html
+            rm -f "$RUNNER_TEMP/site/dev/404.html"
+          else
+            echo "No dev branch, skipping staging build"
+          fi
+
       - name: Custom domain
-        run: echo "circuits.kjeraglabs.no" > dist/CNAME
+        run: echo "circuits.kjeraglabs.no" > "$RUNNER_TEMP/site/CNAME"
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ${{ runner.temp }}/site
 
   deploy:
     needs: build

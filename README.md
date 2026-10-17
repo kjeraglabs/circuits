@@ -50,8 +50,18 @@ gray for neutral and light blue for negative. The choice is remembered per brows
   `https://circuits.kjeraglabs.no/<name>`. This works through `404.html`, which `build.sh`
   makes from the main page, so the site must be served from the domain root.
 
-Build with `./build.sh` (needs Java 17+). The site to upload ends up in `dist/`.
-Pushing to `master` on GitHub builds and deploys automatically (`.github/workflows/deploy.yml`).
+**Branches and deploying**
+
+| Branch | Site |
+|---|---|
+| `main` | https://circuits.kjeraglabs.no/ (live) |
+| `dev`  | https://circuits.kjeraglabs.no/dev/ (staging, marked DEV BUILD) |
+
+Work on `dev`, push, and check the staging site about two minutes later. When it works,
+merge `dev` into `main` (a pull request on GitHub, or `git checkout main && git merge dev && git push`)
+to put it live. Every push to either branch rebuilds both sites (`.github/workflows/deploy.yml`).
+
+To build locally: `./build.sh` (needs Java 17+; on Windows run it from Git Bash). The site ends up in `dist/`.
 
 # CircuitJS1
 

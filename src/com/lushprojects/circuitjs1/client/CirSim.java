@@ -381,7 +381,7 @@ MouseOutHandler, MouseWheelHandler {
 	    startCircuit = qp.getValue("startCircuit");
 	    startLabel   = qp.getValue("startLabel");
 	    startCircuitLink = qp.getValue("startCircuitLink");
-	    if (startCircuitText == null && startCircuit == null && startCircuitLink == null)
+	    if (startCircuitText == null && startCircuit == null && startCircuitLink == null && isNotFoundPage())
 		sharedCircuit = getSharedCircuitName(Window.Location.getPath());
 	    euroRes = qp.getBooleanValue("euroResistors", false);
 	    usRes = qp.getBooleanValue("usResistors",  false);
@@ -3629,6 +3629,11 @@ MouseOutHandler, MouseWheelHandler {
 		unsavedChanges = false;
 	}
 	
+	// true when the app was served as 404.html, ie. opened through a path like /led-demo
+	static native boolean isNotFoundPage() /*-{
+	    return !!$wnd.kjeragNotFound;
+	}-*/;
+
 	// "/led-demo" or "/led-demo/" -> "led-demo".  Anything else (root, index.html, deeper paths) -> null
 	static String getSharedCircuitName(String path) {
 	    if (path == null)
