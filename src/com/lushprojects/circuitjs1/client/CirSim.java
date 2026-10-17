@@ -1220,6 +1220,7 @@ MouseOutHandler, MouseWheelHandler {
 
     	MenuBar ioMenuBar = new MenuBar(true);
     	ioMenuBar.addItem(getClassCheckItem(LS("Add Digital Input (MCU pin)"), "DigitalInputElm"));
+    	ioMenuBar.addItem(getClassCheckItem(LS("Add Analog Input (ADC pin)"), "AnalogInputElm"));
     	ioMenuBar.addItem(getClassCheckItem(LS("Add Digital Output (MCU pin)"), "DigitalOutputElm"));
     	ioMenuBar.addItem(getClassCheckItem(LS("Add Analog Output (DAC pin)"), "AnalogOutputElm"));
     	ioMenuBar.addItem(getClassCheckItem(LS("Add Generic Load"), "GenericLoadElm"));
@@ -5667,6 +5668,7 @@ MouseOutHandler, MouseWheelHandler {
     	case 903: return new DigitalInputElm(x1, y1, x2, y2, f, st);
     	case 904: return new DigitalOutputElm(x1, y1, x2, y2, f, st);
     	case 905: return new AnalogOutputElm(x1, y1, x2, y2, f, st);
+    	case 908: return new AnalogInputElm(x1, y1, x2, y2, f, st);
     	case 208: return new CustomLogicElm(x1, y1, x2, y2, f, st);
     	case 209: return new PolarCapacitorElm(x1, y1, x2, y2, f, st);   	
     	case 210: return new DataRecorderElm(x1, y1, x2, y2, f, st);
@@ -5794,6 +5796,8 @@ MouseOutHandler, MouseWheelHandler {
     		return (CircuitElm) new DigitalOutputElm(x1, y1);
     	if (n=="AnalogOutputElm")
     		return (CircuitElm) new AnalogOutputElm(x1, y1);
+    	if (n=="AnalogInputElm")
+    		return (CircuitElm) new AnalogInputElm(x1, y1);
     	if (n=="NMosfetElm" || n == "MosfetElm")
     		return (CircuitElm) new NMosfetElm(x1, y1);
     	if (n=="PMosfetElm")

@@ -57,22 +57,7 @@ class AnalogOutputElm extends CircuitElm {
 
     void draw(Graphics g) {
 	IoTag.draw(g, this, true, "~", IoTag.tint(IoTag.GREEN, .1));
-	// voltage label beside the tag, on the side away from the pin
-	Point c = IoTag.center(this);
-	Point t = interpPoint(point1, point2, 1 + 6/dn);
-	String s = getUnitText(vOut, "V");
-	Font old = g.getFont();
-	g.setFont(new Font("SansSerif", Font.BOLD, 12));
-	g.setColor(whiteColor);
-	// put the text past the end of the tag, left- or right-aligned by direction
-	int w = (int) g.context.measureText(s).getWidth();
-	int tx = t.x, ty = t.y;
-	if (dx > 0) tx += 2;
-	else if (dx < 0) tx -= w + 2;
-	else { tx -= w/2; ty += (dy > 0 ? 12 : -4); }
-	g.drawString(s, tx, ty + (dx != 0 ? 4 : 0));
-	g.setFont(old);
-	adjustBbox(new Point(tx, ty - 12), new Point(tx + w, ty + 4));
+	IoTag.drawLabel(g, this, getUnitText(vOut, "V"));
 	updateDotCount();
 	drawDots(g, IoTag.leadEnd(this), point1, curcount);
 	drawPosts(g);

@@ -95,6 +95,22 @@ class IoTag {
 	g.setFont(old);
     }
 
+    // text just past the end of the tag (away from the pin), e.g. a voltage
+    static void drawLabel(Graphics g, CircuitElm e, String s) {
+	Point t = e.interpPoint(e.point1, e.point2, 1 + 6/e.dn);
+	Font old = g.getFont();
+	g.setFont(new Font("SansSerif", Font.BOLD, 12));
+	g.setColor(CircuitElm.whiteColor);
+	int w = (int) g.context.measureText(s).getWidth();
+	int tx = t.x, ty = t.y;
+	if (e.dx > 0) tx += 2;
+	else if (e.dx < 0) tx -= w + 2;
+	else { tx -= w/2; ty += (e.dy > 0 ? 12 : -4); }
+	g.drawString(s, tx, ty + (e.dx != 0 ? 4 : 0));
+	g.setFont(old);
+	e.adjustBbox(new Point(tx, ty - 12), new Point(tx + w, ty + 4));
+    }
+
     // fill colour: background tinted towards col by amount 0..1
     static Color tint(Color col, double amount) {
 	return new Color(CircuitElm.sim.getBackgroundColor(), col, amount);

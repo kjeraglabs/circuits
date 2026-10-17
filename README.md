@@ -25,6 +25,9 @@ can be given a max power, max voltage and max current in their edit dialog
 * **Digital output** (`O`): click to switch ON/OFF. For each state choose drive high, drive low
   or high-Z, so push-pull, open drain and open source are all possible. Has an output resistance
   (25 ohms) and a 25 mA rating by default. Right-click > Edit to change settings.
+* **Analog input**: shows the pin voltage and the ADC reading for the set reference voltage and
+  resolution (default 3.3 V, 12-bit), e.g. `1.65 V [2048]`. Turns amber outside 0..Vref. Optional
+  input resistance (0 = infinite). Rated 3.6 V like the digital input.
 * **Analog output** (`U`): drives a set voltage through an output resistance (0 = ideal), with
   the voltage shown beside it. Edit > Sliders can put the voltage on a slider.
 
