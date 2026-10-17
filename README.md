@@ -10,10 +10,10 @@ can be given a max power, max voltage and max current in their edit dialog
 * Power and current are averaged with a thermal time constant (default 1 ms) so short
   spikes don't kill parts. Voltage is checked instantly.
 * Reset repairs everything. Editing a part repairs that part.
-* The toolbar button with the X and warning triangle (or Options > Components Can Break) turns
-  breaking off. Parts are then repaired and never burn; overstressed parts get a red-orange
-  warning triangle instead. The setting is saved with the circuit (`909 0`/`909 1`); circuits
-  without it use the browser's last setting.
+* The toolbar button with the X and warning triangle (or Options > Component Ratings) turns
+  the whole feature off: no warnings, no burning, and burned parts are repaired, so the
+  simulator behaves like plain CircuitJS. The setting is saved with the circuit
+  (`909 0`/`909 1`); circuits without it use the browser's last setting.
 * Ratings are saved as an extra `900 P V I tau mode` line after the part. The original
   CircuitJS ignores these lines, so files work in both versions.
 * New resistors default to 1/16 W (0402). New LEDs default to 30 mA and 5 V reverse.

@@ -712,7 +712,7 @@ MouseOutHandler, MouseWheelHandler {
 	}));
 	paperCheckItem.setState(paper && !printable);
 
-	m.addItem(breakingCheckItem = new CheckboxMenuItem(LS("Components Can Break"),
+	m.addItem(breakingCheckItem = new CheckboxMenuItem(LS("Component Ratings"),
 		new Command() { public void execute(){
 		    setBreaking(breakingCheckItem.getState());
 		}

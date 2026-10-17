@@ -307,8 +307,8 @@ class Toolbar extends FlowPanel {
     }
 
     void setBreakingActive(boolean on) {
-	breakingButton.setTitle(on ? "Components can break: ON (click to turn off)"
-				: "Components can break: OFF (click to turn on)");
+	breakingButton.setTitle(on ? "Component ratings: ON, parts warn and burn out (click to turn off)"
+				: "Component ratings: OFF (click to turn on warnings and burn-out)");
 	Style st = breakingButton.getElement().getStyle();
 	st.setProperty("background", on ? ACTIVE_BG : "transparent");
 	st.setProperty("color", on ? HOVER : INK);

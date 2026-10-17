@@ -317,10 +317,9 @@ public abstract class CircuitElm implements Editable {
 	    return "BURNED (" + failReason + ", " + (failMode == FAIL_SHORT ? "shorted" : "open") + ")";
 	if (!hasRatings())
 	    return null;
-	String r = "stress = " + Math.round(stress*100) + "% of rating";
-	if (stress > 1)
-	    r += " (overstressed; breaking is off)";
-	return r;
+	if (!sim.breakingEnabled)
+	    return null;
+	return "stress = " + Math.round(stress*100) + "% of rating";
     }
 
     EditInfo getRatingEditInfo(int n) {
@@ -517,7 +516,8 @@ public abstract class CircuitElm implements Editable {
 
     // draw warning triangle / burned X on top of the element
     void drawRatingOverlay(Graphics g) {
-	if (!supportsRatings() || point1 == null)
+	// with component ratings off the simulator behaves like plain CircuitJS
+	if (!supportsRatings() || point1 == null || !sim.breakingEnabled)
 	    return;
 	if (failed) {
 	    Point c = interpPoint(point1, point2, .5);
@@ -549,7 +549,7 @@ public abstract class CircuitElm implements Editable {
 	    }
 	    int s = 9;
 	    g.context.save();
-	    g.context.setFillStyle(stress > 1 ? "#ff5a3c" : "#ffd000");
+	    g.context.setFillStyle("#ffd000");
 	    g.context.setStrokeStyle("#000000");
 	    g.context.setLineWidth(1.5);
 	    g.context.beginPath();
