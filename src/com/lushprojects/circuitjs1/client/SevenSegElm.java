@@ -276,7 +276,7 @@ package com.lushprojects.circuitjs1.client;
 	void setColor(Graphics g, int p) {
 	    if (diodeDirection == 0) {
 		g.setColor(pins[p].value ? Color.red :
-		       sim.printableCheckItem.getState() ? Color.white : darkred);
+		       sim.isLightBackground() ? Color.white : darkred);
 		return;
 	    }
 	    // 10mA current = max brightness

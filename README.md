@@ -14,6 +14,12 @@ can be given a max power, max voltage and max current in their edit dialog
   CircuitJS ignores these lines, so files work in both versions.
 * New resistors default to 0.25 W. New LEDs default to 30 mA and 5 V reverse.
 
+**Paper theme**
+
+Options > Paper Theme gives a beige paper background with light red for positive voltage,
+gray for neutral and light blue for negative. The choice is remembered per browser, and
+`?paper=true` in the URL turns it on for a link.
+
 **Sharing circuits**
 
 * File > Export As Link puts the whole circuit in the URL: `https://circuits.kjeraglabs.no/?ctz=...`

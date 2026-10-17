@@ -157,10 +157,10 @@ class ScopePlot {
 	    color = CircuitElm.positiveColor.getHexValue();
 	    break;
 	case Scope.UNITS_A:
-	    color = (CirSim.theSim.printableCheckItem.getState()) ? "#A0A000" : "#FFFF00";
+	    color = (CirSim.theSim.isLightBackground()) ? "#A0A000" : "#FFFF00";
 	    break;
 	default:
-	    color = (CirSim.theSim.printableCheckItem.getState()) ? "#000000" : "#FFFFFF";
+	    color = (CirSim.theSim.isLightBackground()) ? "#000000" : "#FFFFFF";
 	    break;
 	}
     }
@@ -617,7 +617,7 @@ class Scope {
     		draw_ox = x2;
     		draw_oy = y2;
     	}
-		if (sim.printableCheckItem.getState()) {
+		if (sim.isLightBackground()) {
 			imageContext.setStrokeStyle("#000000");
 		} else {
 			imageContext.setStrokeStyle("#ffffff");
@@ -632,7 +632,7 @@ class Scope {
 	
     void clear2dView() {
     	if (imageContext!=null) {
-    		if (sim.printableCheckItem.getState()) {
+    		if (sim.isLightBackground()) {
     			imageContext.setFillStyle("#ffffff");
     		} else {
     			imageContext.setFillStyle("#000000");
@@ -795,7 +795,7 @@ class Scope {
     	if (alphadiv>2) {
     		alphadiv=0;
     		imageContext.setGlobalAlpha(0.01);
-    		if (sim.printableCheckItem.getState()) {
+    		if (sim.isLightBackground()) {
     			imageContext.setFillStyle("#ffffff");
     		} else {
     			imageContext.setFillStyle("#000000");
@@ -1041,7 +1041,7 @@ class Scope {
 	    return;
     	int i;
     	String col;
-//    	int col = (sim.printableCheckItem.getState()) ? 0xFFFFFFFF : 0;
+//    	int col = (sim.isLightBackground()) ? 0xFFFFFFFF : 0;
 //    	for (i = 0; i != pixels.length; i++)
 //    		pixels[i] = col;
     	
@@ -1104,7 +1104,7 @@ class Scope {
 
     	String minorDiv = "#404040";
     	String majorDiv = "#A0A0A0";
-    	if (sim.printableCheckItem.getState()) {
+    	if (sim.isLightBackground()) {
     	    minorDiv = "#D0D0D0";
     	    majorDiv = "#808080";
     	    curColor = "#A0A000";
@@ -1266,7 +1266,7 @@ class Scope {
 	g.drawLine(sim.mouseCursorX, rect.y, sim.mouseCursorX, rect.y+rect.height);
 	if (drawY)
 	    g.drawLine(rect.x, sim.mouseCursorY, rect.x+rect.width, sim.mouseCursorY);
-	g.setColor(sim.printableCheckItem.getState() ? Color.white : Color.black);
+	g.setColor(sim.getBackgroundColor());
 	int bx = sim.mouseCursorX;
 	if (bx < szw/2)
 	    bx = szw/2;

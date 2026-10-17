@@ -78,7 +78,7 @@ abstract class ChipElm extends CircuitElm {
 		p.curcount = updateDotCount(p.current, p.curcount);
 		drawDots(g, b, a, p.curcount);
 		if (p.bubble) {
-		    g.setColor(sim.printableCheckItem.getState() ?
+		    g.setColor(sim.isLightBackground() ?
 			       Color.white : Color.black);
 		    drawThickCircle(g, p.bubbleX, p.bubbleY, 1);
 		    g.setColor(lightGrayColor);

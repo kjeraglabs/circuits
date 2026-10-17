@@ -358,11 +358,16 @@ public abstract class CircuitElm implements Editable {
 	    Point c = interpPoint(point1, point2, .5);
 	    int s = 9;
 	    g.context.save();
-	    g.context.setStrokeStyle("#ff2020");
-	    g.context.setLineWidth(4);
+	    g.context.setLineCap("round");
 	    g.context.beginPath();
 	    g.context.moveTo(c.x-s, c.y-s); g.context.lineTo(c.x+s, c.y+s);
 	    g.context.moveTo(c.x+s, c.y-s); g.context.lineTo(c.x-s, c.y+s);
+	    // outline in the background colour so the X stands out from red wires
+	    g.context.setStrokeStyle(sim.getBackgroundColor().getHexValue());
+	    g.context.setLineWidth(7);
+	    g.context.stroke();
+	    g.context.setStrokeStyle(sim.isPaperTheme() ? "#c0171c" : "#ff2020");
+	    g.context.setLineWidth(4);
 	    g.context.stroke();
 	    g.context.restore();
 	    return;
@@ -503,7 +508,10 @@ public abstract class CircuitElm implements Editable {
 	int dx = pb.x-pa.x;
 	int dy = pb.y-pa.y;
 	double dn = Math.sqrt(dx*dx+dy*dy);
-	g.setColor(sim.conventionCheckItem.getState()?Color.yellow:Color.cyan);
+	if (sim.isPaperTheme())
+	    g.setColor(sim.conventionCheckItem.getState() ? new Color(0xB8, 0x86, 0x00) : new Color(0x00, 0x7C, 0x80));
+	else
+	    g.setColor(sim.conventionCheckItem.getState()?Color.yellow:Color.cyan);
 	int ds = 16;
 	pos %= ds;
 	if (pos < 0)

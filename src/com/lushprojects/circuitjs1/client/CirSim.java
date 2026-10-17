@@ -62,6 +62,7 @@ import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.event.logical.shared.CloseEvent;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.canvas.dom.client.CanvasPattern;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.http.client.Request;
@@ -122,6 +123,7 @@ MouseOutHandler, MouseWheelHandler {
     CheckboxMenuItem euroResistorCheckItem;
     CheckboxMenuItem euroGatesCheckItem;
     CheckboxMenuItem printableCheckItem;
+    CheckboxMenuItem paperCheckItem;
     CheckboxMenuItem conventionCheckItem;
     CheckboxMenuItem noEditCheckItem;
     private Label powerLabel;
@@ -349,6 +351,7 @@ MouseOutHandler, MouseWheelHandler {
 
 
 	boolean printable = false;
+	boolean paper = false;
 	boolean convention = true;
 	boolean euroRes = false;
 	boolean usRes = false;
@@ -386,6 +389,7 @@ MouseOutHandler, MouseWheelHandler {
 	    hideSidebar = qp.getBooleanValue("hideSidebar", false);
 	    hideMenu = qp.getBooleanValue("hideMenu", false);
 	    printable = qp.getBooleanValue("whiteBackground", getOptionFromStorage("whiteBackground", false));
+	    paper = qp.getBooleanValue("paper", getOptionFromStorage("paperTheme", false));
 	    convention = qp.getBooleanValue("conventionalCurrent",
 		    getOptionFromStorage("conventionalCurrent", true));
 	    noEditing = !qp.getBooleanValue("editable", true);
@@ -548,10 +552,28 @@ MouseOutHandler, MouseWheelHandler {
 		    int i;
 		    for (i=0;i<scopeCount;i++)
 			scopes[i].setRect(scopes[i].rect);
+		    // white and paper are alternatives
+		    if (printableCheckItem.getState())
+			paperCheckItem.setState(false);
 		    setOptionInStorage("whiteBackground", printableCheckItem.getState());
+		    setOptionInStorage("paperTheme", paperCheckItem.getState());
+		    applyTheme();
 		}
 	}));
 	printableCheckItem.setState(printable);
+	m.addItem(paperCheckItem = new CheckboxMenuItem(LS("Paper Theme"),
+		new Command() { public void execute(){
+		    int i;
+		    for (i=0;i<scopeCount;i++)
+			scopes[i].setRect(scopes[i].rect);
+		    if (paperCheckItem.getState())
+			printableCheckItem.setState(false);
+		    setOptionInStorage("whiteBackground", printableCheckItem.getState());
+		    setOptionInStorage("paperTheme", paperCheckItem.getState());
+		    applyTheme();
+		}
+	}));
+	paperCheckItem.setState(paper && !printable);
 
 	m.addItem(conventionCheckItem = new CheckboxMenuItem(LS("Conventional Current Motion"),
 		new Command() { public void execute(){
@@ -763,8 +785,90 @@ MouseOutHandler, MouseWheelHandler {
 	    CircuitElm.positiveColor = Color.blue;
 	if (negativeColor != null)
 	    CircuitElm.negativeColor = new Color(URL.decodeQueryString(negativeColor));
-	    
+	normalPositiveColor = CircuitElm.positiveColor;
+	normalNegativeColor = CircuitElm.negativeColor;
+	normalNeutralColor = CircuitElm.neutralColor;
+	applyTheme();
+    }
+
+    // ---- Paper theme (Kjerag Labs addition) ----
+    static final Color PAPER_BG       = new Color(0xF3, 0xEC, 0xDC);  // beige canvas paper
+    static final Color PAPER_INK      = new Color(0x3B, 0x35, 0x2D);  // text and outlines
+    static final Color PAPER_INK_SOFT = new Color(0x6A, 0x62, 0x57);
+    static final Color PAPER_POSITIVE = new Color(0xE2, 0x6A, 0x5C);  // light red
+    static final Color PAPER_NEGATIVE = new Color(0x4F, 0x9A, 0xD8);  // light blue
+    static final Color PAPER_NEUTRAL  = new Color(0x9A, 0x95, 0x8E);  // gray
+
+    Color normalPositiveColor, normalNegativeColor, normalNeutralColor;
+    CanvasPattern paperPattern;
+
+    boolean isPaperTheme() {
+	return paperCheckItem != null && paperCheckItem.getState();
+    }
+
+    // true for any light background (white or paper)
+    boolean isLightBackground() {
+	return printableCheckItem.getState() || isPaperTheme();
+    }
+
+    void applyTheme() {
+	if (isPaperTheme()) {
+	    CircuitElm.positiveColor = PAPER_POSITIVE;
+	    CircuitElm.negativeColor = PAPER_NEGATIVE;
+	    CircuitElm.neutralColor  = PAPER_NEUTRAL;
+	} else {
+	    CircuitElm.positiveColor = normalPositiveColor;
+	    CircuitElm.negativeColor = normalNegativeColor;
+	    CircuitElm.neutralColor  = normalNeutralColor;
+	}
 	CircuitElm.setColorScale();
+    }
+
+    // a tile of faint speckles and fibres, so the background reads as paper rather than flat beige
+    CanvasPattern getPaperPattern(Context2d ctx) {
+	if (paperPattern != null)
+	    return paperPattern;
+	Canvas tile = Canvas.createIfSupported();
+	if (tile == null)
+	    return null;
+	int n = 192;
+	tile.setCoordinateSpaceWidth(n);
+	tile.setCoordinateSpaceHeight(n);
+	Context2d t = tile.getContext2d();
+	t.setFillStyle(PAPER_BG.getHexValue());
+	t.fillRect(0, 0, n, n);
+	int i;
+	for (i = 0; i != 1400; i++) {
+	    double x = Math.random()*n, y = Math.random()*n;
+	    boolean dark = Math.random() < .55;
+	    double a = .03 + Math.random()*.05;
+	    t.setFillStyle(dark ? "rgba(120,95,60," + a + ")" : "rgba(255,255,250," + (a*2) + ")");
+	    t.fillRect(x, y, 1, 1);
+	}
+	t.setLineWidth(.6);
+	for (i = 0; i != 40; i++) {
+	    double x = Math.random()*n, y = Math.random()*n;
+	    double ang = Math.random()*Math.PI, len = 4 + Math.random()*10;
+	    t.setStrokeStyle("rgba(140,110,70," + (.04 + Math.random()*.05) + ")");
+	    t.beginPath();
+	    t.moveTo(x, y);
+	    t.lineTo(x + Math.cos(ang)*len, y + Math.sin(ang)*len);
+	    t.stroke();
+	}
+	paperPattern = ctx.createPattern(tile.getCanvasElement(), Context2d.Repetition.REPEAT);
+	return paperPattern;
+    }
+
+    void fillBackground(Graphics g, int x, int y, int w, int h) {
+	if (isPaperTheme()) {
+	    CanvasPattern pat = getPaperPattern(g.context);
+	    if (pat != null)
+		g.context.setFillStyle(pat);
+	    else
+		g.setColor(PAPER_BG);
+	} else
+	    g.setColor(printableCheckItem.getState() ? Color.white : Color.black);
+	g.fillRect(x, y, w, h);
     }
     
     MenuItem menuItemWithShortcut(String icon, String text, String shortcut, MyCommand cmd) {
@@ -1265,17 +1369,18 @@ MouseOutHandler, MouseWheelHandler {
 
 	Graphics g=new Graphics(backcontext);
 	
-	CircuitElm.selectColor = Color.cyan;
-	if (printableCheckItem.getState()) {
+	CircuitElm.selectColor = isPaperTheme() ? new Color(0x00, 0x8B, 0x8B) : Color.cyan;
+	if (isPaperTheme()) {
+	    CircuitElm.whiteColor = PAPER_INK;
+	    CircuitElm.lightGrayColor = PAPER_INK_SOFT;
+	} else if (printableCheckItem.getState()) {
   	    CircuitElm.whiteColor = Color.black;
   	    CircuitElm.lightGrayColor = Color.black;
-  	    g.setColor(Color.white);
 	} else {
 	    CircuitElm.whiteColor = Color.white;
 	    CircuitElm.lightGrayColor = Color.lightGray;
-	    g.setColor(Color.black);
 	}
-	g.fillRect(0, 0, g.context.getCanvas().getWidth(), g.context.getCanvas().getHeight());
+	fillBackground(g, 0, 0, g.context.getCanvas().getWidth(), g.context.getCanvas().getHeight());
 	myrunstarttime=System.currentTimeMillis();
 	if (simRunning) {
 	    try {
@@ -1402,11 +1507,7 @@ MouseOutHandler, MouseWheelHandler {
 	
 	backcontext.setTransform(1, 0, 0, 1, 0, 0);
 
-	if (printableCheckItem.getState())
-	    g.setColor(Color.white);
-	else
-	    g.setColor(Color.black);
-	g.fillRect(0, circuitArea.height, circuitArea.width, cv.getCoordinateSpaceHeight()-circuitArea.height);
+	fillBackground(g, 0, circuitArea.height, circuitArea.width, cv.getCoordinateSpaceHeight()-circuitArea.height);
 //	g.restore();
 	g.setFont(oldfont);
 	int ct = scopeCount;
@@ -1509,6 +1610,8 @@ MouseOutHandler, MouseWheelHandler {
     }
 
     Color getBackgroundColor() {
+	if (isPaperTheme())
+	    return PAPER_BG;
 	if (printableCheckItem.getState())
 	    return Color.white;
 	return Color.black;
