@@ -212,7 +212,7 @@ public abstract class CircuitElm implements Editable {
     void setNodeVoltage(int n, double c) {
 	volts[n] = c;
 	if (failed)
-	    current = (volts[0]-volts[1])/getFailResistance();
+	    current = (volts[0]-(getPostCount() > 1 ? volts[1] : 0))/getFailResistance();
 	else
 	    calculateCurrent();
     }
@@ -254,7 +254,7 @@ public abstract class CircuitElm implements Editable {
 
     // stamp a failed element in place of its normal stamp
     void stampFailed() {
-	sim.stampResistor(nodes[0], nodes[1], getFailResistance());
+	sim.stampResistor(nodes[0], getPostCount() > 1 ? nodes[1] : 0, getFailResistance());
 	// keep any internal nodes (eg diode series resistance) from floating
 	int i;
 	for (i = getPostCount(); i < getPostCount()+getInternalNodeCount(); i++)

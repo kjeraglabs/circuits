@@ -136,7 +136,7 @@ package com.lushprojects.circuitjs1.client;
 		posCount = (isTernary()) ? 3 : 2;
 	    }
 	}
-	int getShortcut() { return 'i'; }
+	int getShortcut() { return 0; }
 	
 	double getCurrentIntoNode(int n) {
 	    return current;

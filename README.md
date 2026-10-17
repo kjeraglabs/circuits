@@ -12,7 +12,23 @@ can be given a max power, max voltage and max current in their edit dialog
 * Reset repairs everything. Editing a part repairs that part.
 * Ratings are saved as an extra `900 P V I tau mode` line after the part. The original
   CircuitJS ignores these lines, so files work in both versions.
-* New resistors default to 0.25 W. New LEDs default to 30 mA and 5 V reverse.
+* New resistors default to 1/16 W (0402). New LEDs default to 30 mA and 5 V reverse.
+
+**I/O pins and loads** (Draw > I/O Pins and Loads)
+
+* **Generic load** (`L`): runs between a min and max supply voltage and then draws a set
+  current. Green when on. Below the minimum it is off (brownout), above the maximum it shuts
+  off. A weak supply leaves it partly on. Pin 1 is marked +.
+* **Digital input** (`I`): reads its pin against VIL/VIH and shows H, L or ? (in between).
+  Optional internal pull-up (to VDD) or pull-down with a resistor value; 0 ohms means none.
+  New inputs are rated 3.6 V, so 5 V burns a 3.3 V pin.
+* **Digital output** (`O`): click to switch ON/OFF. For each state choose drive high, drive low
+  or high-Z, so push-pull, open drain and open source are all possible. Has an output resistance
+  (25 ohms) and a 25 mA rating by default. Right-click > Edit to change settings.
+* **Analog output** (`U`): drives a set voltage through an output resistance (0 = ideal), with
+  the voltage shown beside it. Edit > Sliders can put the voltage on a slider.
+
+All four support component ratings.
 
 **Toolbar**
 
@@ -33,6 +49,11 @@ hover or tap. Options > Toolbar hides it. Part icons come from Paul Falstad's to
 | `A` | op amp with V+ / V- supply pins |
 | `l` | net label: labels with the same name are connected |
 | `D` | LED (moved from `l`) |
+| `i` | inductor (moved from `L`) |
+| `L` | generic load |
+| `I` | digital input pin |
+| `O` | digital output pin |
+| `U` | analog output pin |
 | `r` | rotate 90 degrees |
 | `x` | mirror left/right |
 | `y` | mirror up/down |
