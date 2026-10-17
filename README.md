@@ -10,6 +10,10 @@ can be given a max power, max voltage and max current in their edit dialog
 * Power and current are averaged with a thermal time constant (default 1 ms) so short
   spikes don't kill parts. Voltage is checked instantly.
 * Reset repairs everything. Editing a part repairs that part.
+* The toolbar button with the X and warning triangle (or Options > Components Can Break) turns
+  breaking off. Parts are then repaired and never burn; overstressed parts get a red-orange
+  warning triangle instead. The setting is saved with the circuit (`909 0`/`909 1`); circuits
+  without it use the browser's last setting.
 * Ratings are saved as an extra `900 P V I tau mode` line after the part. The original
   CircuitJS ignores these lines, so files work in both versions.
 * New resistors default to 1/16 W (0402). New LEDs default to 30 mA and 5 V reverse.
@@ -35,10 +39,11 @@ All four support component ratings.
 
 **Tolerance testing** (Edit > Tolerance Testing, or the toolbar button with the resistor and ±)
 
-Resistors, capacitors and inductors have a Tolerance (%) setting (0 = none). In tolerance testing
+Resistors, capacitors and inductors have a Tolerance (%) setting (0 = none). New resistors
+default to 5% and new capacitors to 20%. In tolerance testing
 mode each part with a tolerance gets an up/down switch beside it: up uses the value + tolerance,
-down the value - tolerance, and clicking the lit half again goes back to nominal. The info box
-shows the value in use. "All nominal" resets every switch; "Exit tolerance testing" leaves the
+down the value - tolerance, and clicking the lit half again goes back to nominal. The part's
+value label then shows the value in use, in red (up) or blue (down), and so does the info box. "All nominal" resets every switch; "Exit tolerance testing" leaves the
 mode. The mode and switch positions are saved with the circuit, so an exported link opens in
 tolerance testing mode. Saved as `906 percent position` after each part and `907 1` for the mode.
 

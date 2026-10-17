@@ -54,7 +54,7 @@ package com.lushprojects.circuitjs1.client;
 	    setPowerColor(g, false);
 	    drawCoil(g, 8, lead1, lead2, v1, v2);
 	    if (sim.showValuesCheckItem.getState()) {
-		String s = getShortUnitText(inductance, "H");
+		String s = getShortUnitText(getEffInductance(), "H");
 		drawValues(g, s, hs);
 	    }
 	    doDots(g);

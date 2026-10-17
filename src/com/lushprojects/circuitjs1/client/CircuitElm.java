@@ -280,7 +280,7 @@ public abstract class CircuitElm implements Editable {
 	    s = filtCurrent/ratedCurrent; why = "current";
 	}
 	stress = s;
-	if (s > 1) {
+	if (s > 1 && sim.breakingEnabled) {
 	    failed = true;
 	    failReason = why;
 	    return true;
@@ -317,7 +317,10 @@ public abstract class CircuitElm implements Editable {
 	    return "BURNED (" + failReason + ", " + (failMode == FAIL_SHORT ? "shorted" : "open") + ")";
 	if (!hasRatings())
 	    return null;
-	return "stress = " + Math.round(stress*100) + "% of rating";
+	String r = "stress = " + Math.round(stress*100) + "% of rating";
+	if (stress > 1)
+	    r += " (overstressed; breaking is off)";
+	return r;
     }
 
     EditInfo getRatingEditInfo(int n) {
@@ -536,9 +539,17 @@ public abstract class CircuitElm implements Editable {
 	}
 	if (hasRatings() && stress >= RATING_WARN) {
 	    Point c = interpPoint(point1, point2, .5, -22);
+	    if (sim.toleranceMode && hasTolerance()) {
+		// the tolerance switch is beside the part: put the triangle just beyond it
+		Point sw = toleranceSwitchCenter();
+		int mx = (x+x2)/2, my = (y+y2)/2;
+		double vx = sw.x - mx, vy = sw.y - my, len = Math.sqrt(vx*vx + vy*vy);
+		if (len > 0)
+		    c = new Point((int) (sw.x + vx/len*20), (int) (sw.y + vy/len*20));
+	    }
 	    int s = 9;
 	    g.context.save();
-	    g.context.setFillStyle("#ffd000");
+	    g.context.setFillStyle(stress > 1 ? "#ff5a3c" : "#ffd000");
 	    g.context.setStrokeStyle("#000000");
 	    g.context.setLineWidth(1.5);
 	    g.context.beginPath();
@@ -961,6 +972,8 @@ public abstract class CircuitElm implements Editable {
 	//FontMetrics fm = g.getFontMetrics();
 	int w = (int)g.context.measureText(s).getWidth();
 	g.setColor(whiteColor);
+	if (tolFactor() != 1)
+	    g.setColor(tolDev > 0 ? positiveColor : negativeColor);
 	int ya = (int)g.currentFontSize/2;
 	int xc, yc;
 	if (this instanceof RailElm || this instanceof SweepElm) {

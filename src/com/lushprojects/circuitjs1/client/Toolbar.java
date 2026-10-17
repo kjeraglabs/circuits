@@ -54,7 +54,7 @@ class Toolbar extends FlowPanel {
     }
 
     CirSim sim;
-    Label toleranceButton;
+    Label toleranceButton, breakingButton;
     ArrayList<Button> buttons = new ArrayList<Button>();
     String lastActive = "";
     Button openPalette;
@@ -93,6 +93,15 @@ class Toolbar extends FlowPanel {
 		sim.menuPerformed("edit", "tolerance");
 	    }
 	});
+	breakingButton = makeButtonLabel("");
+	breakingButton.getElement().setInnerHTML(svg(breakingIcon, 24));
+	addHover(breakingButton, null);
+	breakingButton.addClickHandler(new ClickHandler() {
+	    public void onClick(ClickEvent e) {
+		sim.menuPerformed("edit", "breaking");
+	    }
+	});
+	setBreakingActive(sim.breakingEnabled);
 	addSeparator();
 
 	addPart("Wire", new String[] { "WireElm" }, new String[] { wireIcon });
@@ -297,6 +306,15 @@ class Toolbar extends FlowPanel {
 	hideTimer = null;
     }
 
+    void setBreakingActive(boolean on) {
+	breakingButton.setTitle(on ? "Components can break: ON (click to turn off)"
+				: "Components can break: OFF (click to turn on)");
+	Style st = breakingButton.getElement().getStyle();
+	st.setProperty("background", on ? ACTIVE_BG : "transparent");
+	st.setProperty("color", on ? HOVER : INK);
+	st.setProperty("opacity", on ? "1" : ".55");
+    }
+
     void setToleranceActive(boolean on) {
 	Style st = toleranceButton.getElement().getStyle();
 	st.setProperty("background", on ? ACTIVE_BG : "transparent");
@@ -350,6 +368,11 @@ class Toolbar extends FlowPanel {
 	"<path d='M1 12h6'/><path d='M7 6.5h9l5 5.5-5 5.5H7z'/><path d='M9 12.5c1-2.5 2-2.5 3 0s2 2.5 3 0'/></g></svg>";
     static final String aoutIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linejoin='round'>" +
 	"<path d='M1 12h5'/><path d='M6 12l5-5.5h11v11H11z'/><path d='M12.5 12.5c1-2.5 2-2.5 3 0s2 2.5 3 0'/></g></svg>";
+    // burned X with a small warning triangle
+    static final String breakingIcon = "<svg><g fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round'>" +
+	"<path d='M3 5l9 9M12 5l-9 9' stroke-width='2.4'/>" +
+	"<path d='M17.5 11.5l5 9h-10z' stroke-width='1.3'/><path d='M17.5 14.6v2.6' stroke-width='1.4'/></g>" +
+	"<circle cx='17.5' cy='18.8' r='.8' fill='currentColor'/></svg>";
     static final String toleranceIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>" +
 	"<path d='M1 15h3l1-2.5 2 5 2-5 2 5 2-5 1 2.5h3'/><path d='M20 3v6M17 6h6M17 12h6'/></g></svg>";
     static final String labelIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>" +

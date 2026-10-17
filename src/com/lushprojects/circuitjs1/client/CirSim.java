@@ -127,6 +127,8 @@ MouseOutHandler, MouseWheelHandler {
     CheckboxMenuItem paperCheckItem;
     CheckboxMenuItem toolbarCheckItem;
     CheckboxMenuItem toleranceCheckItem;
+    CheckboxMenuItem breakingCheckItem;
+    boolean breakingEnabled = true;
     boolean toleranceMode;
     ToleranceBanner toleranceBanner;
     Toolbar toolbar;
@@ -367,6 +369,26 @@ MouseOutHandler, MouseWheelHandler {
 	    toleranceBanner.update();
 	if (toolbar != null)
 	    toolbar.setToleranceActive(on);
+	needAnalyze();
+    }
+
+    // ---- component breaking on/off ----
+    static final int BREAKING_DUMP_TYPE = 909;
+    int readBreaking;   // -1 = not in file, else 0/1
+
+    void setBreaking(boolean on) {
+	breakingEnabled = on;
+	setOptionInStorage("breaking", on);
+	if (breakingCheckItem != null)
+	    breakingCheckItem.setState(on);
+	if (toolbar != null)
+	    toolbar.setBreakingActive(on);
+	// turning it off repairs everything that already burned
+	int i;
+	if (!on)
+	    for (i = 0; i != elmList.size(); i++)
+		if (getElm(i).failed)
+		    getElm(i).resetRating();
 	needAnalyze();
     }
 
@@ -689,6 +711,14 @@ MouseOutHandler, MouseWheelHandler {
 		}
 	}));
 	paperCheckItem.setState(paper && !printable);
+
+	m.addItem(breakingCheckItem = new CheckboxMenuItem(LS("Components Can Break"),
+		new Command() { public void execute(){
+		    setBreaking(breakingCheckItem.getState());
+		}
+	}));
+	breakingEnabled = getOptionFromStorage("breaking", true);
+	breakingCheckItem.setState(breakingEnabled);
 
 	m.addItem(toolbarCheckItem = new CheckboxMenuItem(LS("Toolbar"),
 		new Command() { public void execute(){
@@ -3244,6 +3274,8 @@ MouseOutHandler, MouseWheelHandler {
     	}
     	if (item=="tolerance")
     	    setToleranceMode(!toleranceMode);
+    	if (item=="breaking")
+    	    setBreaking(!breakingEnabled);
     	if (item=="rotate")
     	    transformSelection(XFORM_ROTATE);
     	if (item=="mirrorx")
@@ -3659,6 +3691,8 @@ MouseOutHandler, MouseWheelHandler {
 	// tolerance testing mode is part of the circuit, so shared links open in it
 	if (toleranceMode)
 	    dump += TOLERANCE_MODE_DUMP_TYPE + " 1\n";
+	// so is whether parts can break
+	dump += BREAKING_DUMP_TYPE + " " + (breakingEnabled ? 1 : 0) + "\n";
 	for (i = 0; i != adjustables.size(); i++) {
 	    Adjustable adj = adjustables.get(i);
 	    dump += "38 " + adj.dump() + "\n";
@@ -3886,6 +3920,7 @@ MouseOutHandler, MouseWheelHandler {
 	boolean subs = (flags & RC_SUBCIRCUITS) != 0;
 	CircuitElm lastReadElm = null;
 	readToleranceMode = false;
+	readBreaking = -1;
 	//cv.repaint();
 	int p;
 	for (p = 0; p < len; ) {
@@ -3953,6 +3988,10 @@ MouseOutHandler, MouseWheelHandler {
 			    lastReadElm.undumpTolerance(st);
 			break;
 		    }
+		    if (tint == BREAKING_DUMP_TYPE) {
+			readBreaking = new Integer(st.nextToken()).intValue() != 0 ? 1 : 0;
+			break;
+		    }
 		    if (tint == TOLERANCE_MODE_DUMP_TYPE) {
 			readToleranceMode = new Integer(st.nextToken()).intValue() != 0;
 			break;
@@ -3992,8 +4031,12 @@ MouseOutHandler, MouseWheelHandler {
 	}
 	setPowerBarEnable();
 	enableItems();
-	if ((flags & RC_RETAIN) == 0)
+	if ((flags & RC_RETAIN) == 0) {
 	    setToleranceMode(readToleranceMode);
+	    // a circuit without the line uses this browser's last setting
+	    if (readBreaking >= 0 && (readBreaking == 1) != breakingEnabled)
+		setBreaking(readBreaking == 1);
+	}
 	if ((flags & RC_RETAIN) == 0) {
 	    // create sliders as needed
 	    for (i = 0; i != adjustables.size(); i++)

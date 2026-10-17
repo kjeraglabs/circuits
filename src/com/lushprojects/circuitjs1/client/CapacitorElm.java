@@ -30,6 +30,7 @@ package com.lushprojects.circuitjs1.client;
 	    capacitance = 1e-5;
 	    initialVoltage = 1e-3;
 	    failMode = FAIL_SHORT;
+	    tolerance = .2;
 	}
 	public CapacitorElm(int xa, int ya, int xb, int yb, int f,
 			    StringTokenizer st) {
@@ -111,7 +112,7 @@ package com.lushprojects.circuitjs1.client;
 	    }
 	    drawPosts(g);
 	    if (sim.showValuesCheckItem.getState()) {
-		String s = getShortUnitText(capacitance, "F");
+		String s = getShortUnitText(getEffCapacitance(), "F");
 		drawValues(g, s, hs);
 	    }
 	}

@@ -23,7 +23,7 @@ import com.google.gwt.canvas.dom.client.CanvasGradient;
 
     class ResistorElm extends CircuitElm {
 	double resistance;
-	public ResistorElm(int xx, int yy) { super(xx, yy); resistance = 1000; ratedPower = 0.0625; }  // 1/16 W, typical 0402
+	public ResistorElm(int xx, int yy) { super(xx, yy); resistance = 1000; ratedPower = 0.0625; tolerance = .05; }  // 1/16 W 5%, typical 0402
 	boolean supportsRatings() { return true; }
 	boolean supportsTolerance() { return true; }
 	double getEffResistance() { return resistance*tolFactor(); }
@@ -83,7 +83,7 @@ import com.google.gwt.canvas.dom.client.CanvasGradient;
 	    }
 	    g.context.restore();
 	    if (sim.showValuesCheckItem.getState()) {
-		String s = getShortUnitText(resistance, "");
+		String s = getShortUnitText(getEffResistance(), "");
 		drawValues(g, s, hs+2);
 	    }
 	    doDots(g);
