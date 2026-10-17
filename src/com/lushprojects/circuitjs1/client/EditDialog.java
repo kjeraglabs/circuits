@@ -49,6 +49,25 @@ class EditDialog extends DialogBox  {
 	Button applyButton, okButton, cancelButton;
 	EditInfo einfos[];
 	int einfocount;
+	// number of the element's own fields; rating fields follow them
+	int elmFieldCount;
+
+	boolean hasRatingFields() {
+	    return elm instanceof CircuitElm && ((CircuitElm) elm).supportsRatings();
+	}
+	EditInfo getField(int i) {
+	    if (i < elmFieldCount)
+		return elm.getEditInfo(i);
+	    if (hasRatingFields())
+		return ((CircuitElm) elm).getRatingEditInfo(i-elmFieldCount);
+	    return null;
+	}
+	void setField(int i, EditInfo ei) {
+	    if (i < elmFieldCount)
+		elm.setEditValue(i, ei);
+	    else if (hasRatingFields())
+		((CircuitElm) elm).setRatingEditValue(i-elmFieldCount, ei);
+	}
 	final int barmax = 1000;
 	VerticalPanel vp;
 	HorizontalPanel hp;
@@ -64,7 +83,7 @@ class EditDialog extends DialogBox  {
 //		setLayout(new EditDialogLayout());
 		vp=new VerticalPanel();
 		setWidget(vp);
-		einfos = new EditInfo[10];
+		einfos = new EditInfo[40];
 //		noCommaFormat = DecimalFormat.getInstance();
 //		noCommaFormat.setMaximumFractionDigits(10);
 //		noCommaFormat.setGroupingUsed(false);
@@ -101,9 +120,11 @@ class EditDialog extends DialogBox  {
 	void buildDialog() {
 		int i;
 		int idx;
+		for (elmFieldCount = 0; elm.getEditInfo(elmFieldCount) != null; elmFieldCount++)
+			;
 		for (i = 0; ; i++) {
 			Label l = null;
-			einfos[i] = elm.getEditInfo(i);
+			einfos[i] = getField(i);
 			if (einfos[i] == null)
 				break;
 			EditInfo ei = einfos[i];
@@ -244,10 +265,10 @@ class EditDialog extends DialogBox  {
 			}
 			if (ei.button != null)
 			    continue;
-			elm.setEditValue(i, ei);
+			setField(i, ei);
 			
 			// update slider if any
-			if (elm instanceof CircuitElm) {
+			if (elm instanceof CircuitElm && i < elmFieldCount) {
 			    Adjustable adj = cframe.findAdjustable((CircuitElm)elm, i);
 			    if (adj != null)
 				adj.setSliderValue(ei.value);
@@ -271,7 +292,7 @@ class EditDialog extends DialogBox  {
 			applied = true;
 		    }
 		    
-		    elm.setEditValue(i, ei);
+		    setField(i, ei);
 		    if (ei.newDialog)
 			changed = true;
 		    cframe.needAnalyze();

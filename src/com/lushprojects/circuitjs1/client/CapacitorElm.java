@@ -29,6 +29,7 @@ package com.lushprojects.circuitjs1.client;
 	    super(xx, yy);
 	    capacitance = 1e-5;
 	    initialVoltage = 1e-3;
+	    failMode = FAIL_SHORT;
 	}
 	public CapacitorElm(int xa, int ya, int xb, int yb, int f,
 			    StringTokenizer st) {
@@ -40,6 +41,7 @@ package com.lushprojects.circuitjs1.client;
 		initialVoltage = new Double(st.nextToken()).doubleValue();
 	    } catch (Exception e) {}
 	}
+	boolean supportsRatings() { return true; }
 	boolean isTrapezoidal() { return (flags & FLAG_BACK_EULER) == 0; }
 	void setNodeVoltage(int n, double c) {
 	    super.setNodeVoltage(n, c);

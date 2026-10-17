@@ -1331,6 +1331,8 @@ MouseOutHandler, MouseWheelHandler {
 	      g.setColor(Color.white);*/
 	    getElm(i).draw(g);
 	}
+	for (i = 0; i != elmList.size(); i++)
+	    getElm(i).drawRatingOverlay(g);
 	mydrawtime+=System.currentTimeMillis()-mydrawstarttime;
 	
 	// draw posts normally
@@ -1419,6 +1421,13 @@ MouseOutHandler, MouseWheelHandler {
 	    if (mouseElm != null) {
 		if (mousePost == -1) {
 		    mouseElm.getInfo(info);
+		    String rinfo = mouseElm.getRatingInfo();
+		    if (rinfo != null) {
+			int ri;
+			for (ri = 0; ri < info.length-1 && info[ri] != null; ri++)
+			    ;
+			info[ri] = rinfo;
+		    }
 		    info[0] = LS(info[0]);
 		    if (info[1] != null)
 			info[1] = LS(info[1]);
@@ -2148,7 +2157,10 @@ MouseOutHandler, MouseWheelHandler {
 	for (i = 0; i != elmList.size(); i++) {
 	    CircuitElm ce = getElm(i);
 	    ce.setParentList(elmList);
-	    ce.stamp();
+	    if (ce.failed)
+		ce.stampFailed();
+	    else
+		ce.stamp();
 	}
 
 	if (!simplifyMatrix(matrixSize))
@@ -2612,7 +2624,8 @@ MouseOutHandler, MouseWheelHandler {
 	    int i, j, subiter;
 	    for (i = 0; i != elmList.size(); i++) {
 		CircuitElm ce = getElm(i);
-		ce.startIteration();
+		if (!ce.failed)
+		    ce.startIteration();
 	    }
 	    steps++;
 	    int subiterCount = (adjustTimeStep && timeStep/2 > minTimeStep) ? 100 : 5000;
@@ -2630,7 +2643,8 @@ MouseOutHandler, MouseWheelHandler {
 		}
 		for (i = 0; i != elmList.size(); i++) {
 		    CircuitElm ce = getElm(i);
-		    ce.doStep();
+		    if (!ce.failed)
+			ce.doStep();
 		}
 		if (stopMessage != null)
 		    return;
@@ -2702,8 +2716,12 @@ MouseOutHandler, MouseWheelHandler {
 		timeStepAccum -= maxTimeStep;
 		timeStepCount++;
 	    }
-	    for (i = 0; i != elmList.size(); i++)
+	    boolean somethingBurned = false;
+	    for (i = 0; i != elmList.size(); i++) {
 		getElm(i).stepFinished();
+		if (getElm(i).ratingStep(timeStep))
+		    somethingBurned = true;
+	    }
 	    if (!delayWireProcessing)
 		calcWireCurrents();
 	    for (i = 0; i != scopeCount; i++)
@@ -2714,6 +2732,12 @@ MouseOutHandler, MouseWheelHandler {
 	    // save last node voltages so we can restart the next iteration if necessary
 	    for (i = 0; i != lastNodeVoltages.length; i++)
 		lastNodeVoltages[i] = nodeVoltages[i];
+	    if (somethingBurned) {
+		// a part died: rebuild the matrix with it as open/short before continuing
+		lit = System.currentTimeMillis();
+		needAnalyze();
+		break;
+	    }
 //	    console("set lastrightside at " + t + " " + lastNodeVoltages);
 		
 	    tm = System.currentTimeMillis();
@@ -2807,8 +2831,10 @@ MouseOutHandler, MouseWheelHandler {
     	    setSimRunning(true);
     	t = timeStepAccum = 0;
     	timeStepCount = 0;
-    	for (i = 0; i != elmList.size(); i++)
+    	for (i = 0; i != elmList.size(); i++) {
 		getElm(i).reset();
+		getElm(i).resetRating();
+	}
 	for (i = 0; i != scopeCount; i++)
 		scopes[i].resetGraph(true);
     	repaint();
@@ -3313,6 +3339,16 @@ MouseOutHandler, MouseWheelHandler {
     }
     
 
+    // element dump plus optional rating line ("900 P V I tau mode").
+    // Unmodified CircuitJS ignores 900 lines, so files stay compatible.
+    static String dumpWithRating(CircuitElm ce) {
+	String d = ce.dump() + "\n";
+	String r = ce.dumpRating();
+	if (r != null)
+	    d += r + "\n";
+	return d;
+    }
+
     String dumpCircuit() {
 	int i;
 	CustomLogicModel.clearDumpedFlags();
@@ -3336,7 +3372,7 @@ MouseOutHandler, MouseWheelHandler {
 	    String m = ce.dumpModel();
 	    if (m != null && !m.isEmpty())
 		dump += m + "\n";
-	    dump += ce.dump() + "\n";
+	    dump += dumpWithRating(ce);
 	}
 	for (i = 0; i != scopeCount; i++) {
 	    String d = scopes[i].dump();
@@ -3525,6 +3561,7 @@ MouseOutHandler, MouseWheelHandler {
 	    lastIterTime = 0;
 	}
 	boolean subs = (flags & RC_SUBCIRCUITS) != 0;
+	CircuitElm lastReadElm = null;
 	//cv.repaint();
 	int p;
 	for (p = 0; p < len; ) {
@@ -3582,6 +3619,11 @@ MouseOutHandler, MouseWheelHandler {
 			TransistorModel.undumpModel(st);
 			break;
 		    }
+		    if (tint == CircuitElm.RATING_DUMP_TYPE) {
+			if (lastReadElm != null)
+			    lastReadElm.undumpRating(st);
+			break;
+		    }
 		    if (tint == 38) {
 			Adjustable adj = new Adjustable(st, this);
 			adjustables.add(adj);
@@ -3604,6 +3646,7 @@ MouseOutHandler, MouseWheelHandler {
 			    }
 		    newce.setPoints();
 		    elmList.addElement(newce);
+		    lastReadElm = newce;
 		} catch (Exception ee) {
 		    ee.printStackTrace();
 		    console("exception while undumping " + ee);
@@ -4592,7 +4635,7 @@ MouseOutHandler, MouseWheelHandler {
     		// elm by number get's messed up in the dump. For now we will just ignore them
     		// until I can be bothered to come up with something better
     		if (willDelete(ce) && !(ce instanceof ScopeElm) ) {
-    			clipboard += ce.dump() + "\n";
+    			clipboard += dumpWithRating(ce);
     		}
     	}
     	writeClipboardToStorage();
@@ -4690,7 +4733,7 @@ MouseOutHandler, MouseWheelHandler {
 		r += m + "\n";
 	    // See notes on do cut why we don't copy ScopeElms.
 	    if (ce.isSelected() && !(ce instanceof ScopeElm))
-		r += ce.dump() + "\n";
+		r += dumpWithRating(ce);
 	}
 	return r;
     }

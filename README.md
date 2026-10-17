@@ -1,3 +1,22 @@
+# CircuitJS1 – Kjerag Labs edition
+
+This fork adds **component ratings**. Resistors, capacitors, diodes, LEDs and zeners
+can be given a max power, max voltage and max current in their edit dialog
+(0 = not rated).
+
+* At 80 % of any rating the part gets a yellow warning triangle.
+* Above 100 % the part burns: it gets a red X and is replaced in the simulation by an
+  open circuit or a short (set per part under "Fails as").
+* Power and current are averaged with a thermal time constant (default 1 ms) so short
+  spikes don't kill parts. Voltage is checked instantly.
+* Reset repairs everything. Editing a part repairs that part.
+* Ratings are saved as an extra `900 P V I tau mode` line after the part. The original
+  CircuitJS ignores these lines, so files work in both versions.
+* New resistors default to 0.25 W. New LEDs default to 30 mA and 5 V reverse.
+
+Build with `./build.sh` (needs Java 17+). The site to upload ends up in `dist/`.
+Pushing to `master` on GitHub builds and deploys automatically (`.github/workflows/deploy.yml`).
+
 # CircuitJS1
 
 ## Introduction

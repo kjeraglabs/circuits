@@ -29,6 +29,8 @@ package com.lushprojects.circuitjs1.client;
 	    setup();
 	    maxBrightnessCurrent = .01;
 	    colorR = 1; colorG = colorB = 0;
+	    ratedCurrent = 0.03;
+	    ratedVoltage = 5;
 	}
 	public LEDElm(int xa, int ya, int xb, int yb, int f,
 		      StringTokenizer st) {

@@ -143,6 +143,8 @@ class DiodeElm extends CircuitElm {
 	drawThickLine(g, cathode[0], cathode[1]);
     }
 	
+    boolean supportsRatings() { return true; }
+
     void stamp() {
 	if (hasResistance) {
 	    // create diode from node 0 to internal node

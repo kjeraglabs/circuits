@@ -211,7 +211,182 @@ public abstract class CircuitElm implements Editable {
     // set voltage of x'th node, called by simulator logic
     void setNodeVoltage(int n, double c) {
 	volts[n] = c;
-	calculateCurrent();
+	if (failed)
+	    current = (volts[0]-volts[1])/getFailResistance();
+	else
+	    calculateCurrent();
+    }
+
+    // ---------------------------------------------------------------
+    // Component ratings / burn-out (Kjerag Labs addition)
+    //
+    // Each element that supports ratings can have a max power, max voltage
+    // and max current.  0 means "not rated".  Power and current are passed
+    // through a first-order filter with time constant ratingTau so short
+    // spikes don't destroy parts; voltage is checked instantly.
+    // stress >= RATING_WARN draws a yellow triangle, stress > 1 kills the
+    // part: it is replaced in the matrix by an open or a short.
+    // ---------------------------------------------------------------
+    static final double RATING_WARN = 0.8;
+    static final int FAIL_OPEN = 0;
+    static final int FAIL_SHORT = 1;
+    static final double FAIL_OPEN_R = 1e9;
+    static final double FAIL_SHORT_R = 1e-2;
+    static final int RATING_DUMP_TYPE = 900;
+
+    double ratedPower, ratedVoltage, ratedCurrent;
+    double ratingTau = 1e-3;
+    int failMode = FAIL_OPEN;
+    double filtPower, filtCurrent, stress;
+    boolean failed;
+    String failReason;
+
+    // override to return true in elements that can be rated
+    boolean supportsRatings() { return false; }
+
+    boolean hasRatings() {
+	return supportsRatings() && (ratedPower > 0 || ratedVoltage > 0 || ratedCurrent > 0);
+    }
+
+    double getFailResistance() {
+	return failMode == FAIL_SHORT ? FAIL_SHORT_R : FAIL_OPEN_R;
+    }
+
+    // stamp a failed element in place of its normal stamp
+    void stampFailed() {
+	sim.stampResistor(nodes[0], nodes[1], getFailResistance());
+	// keep any internal nodes (eg diode series resistance) from floating
+	int i;
+	for (i = getPostCount(); i < getPostCount()+getInternalNodeCount(); i++)
+	    sim.stampResistor(nodes[0], nodes[i], FAIL_OPEN_R);
+    }
+
+    // called once per completed time step.  returns true if the part just failed.
+    boolean ratingStep(double dt) {
+	if (failed || !hasRatings())
+	    return false;
+	double a = (ratingTau > 0) ? Math.min(1, dt/ratingTau) : 1;
+	filtPower   += (Math.abs(getPower())   - filtPower)*a;
+	filtCurrent += (Math.abs(getCurrent()) - filtCurrent)*a;
+	double s = 0;
+	String why = null;
+	if (ratedPower > 0 && filtPower/ratedPower > s) {
+	    s = filtPower/ratedPower; why = "power";
+	}
+	if (ratedVoltage > 0 && Math.abs(getVoltageDiff())/ratedVoltage > s) {
+	    s = Math.abs(getVoltageDiff())/ratedVoltage; why = "voltage";
+	}
+	if (ratedCurrent > 0 && filtCurrent/ratedCurrent > s) {
+	    s = filtCurrent/ratedCurrent; why = "current";
+	}
+	stress = s;
+	if (s > 1) {
+	    failed = true;
+	    failReason = why;
+	    return true;
+	}
+	return false;
+    }
+
+    void resetRating() {
+	failed = false;
+	failReason = null;
+	filtPower = filtCurrent = stress = 0;
+    }
+
+    String dumpRating() {
+	if (!hasRatings())
+	    return null;
+	return RATING_DUMP_TYPE + " " + ratedPower + " " + ratedVoltage + " " +
+	    ratedCurrent + " " + ratingTau + " " + failMode;
+    }
+
+    void undumpRating(StringTokenizer st) {
+	ratedPower   = new Double(st.nextToken()).doubleValue();
+	ratedVoltage = new Double(st.nextToken()).doubleValue();
+	ratedCurrent = new Double(st.nextToken()).doubleValue();
+	ratingTau    = new Double(st.nextToken()).doubleValue();
+	failMode     = new Integer(st.nextToken()).intValue();
+    }
+
+    // one line for the info box, or null
+    String getRatingInfo() {
+	if (!supportsRatings())
+	    return null;
+	if (failed)
+	    return "BURNED (" + failReason + ", " + (failMode == FAIL_SHORT ? "shorted" : "open") + ")";
+	if (!hasRatings())
+	    return null;
+	return "stress = " + Math.round(stress*100) + "% of rating";
+    }
+
+    EditInfo getRatingEditInfo(int n) {
+	if (n == 0)
+	    return new EditInfo("<b>Ratings</b> (0 = not rated)<br>Max power (W)", ratedPower).disallowSliders();
+	if (n == 1)
+	    return new EditInfo("Max voltage (V)", ratedVoltage).disallowSliders();
+	if (n == 2)
+	    return new EditInfo("Max current (A)", ratedCurrent).disallowSliders();
+	if (n == 3)
+	    return new EditInfo("Thermal time constant (s)", ratingTau).disallowSliders();
+	if (n == 4) {
+	    EditInfo ei = new EditInfo("Fails as", 0);
+	    ei.choice = new Choice();
+	    ei.choice.add("Open circuit");
+	    ei.choice.add("Short circuit");
+	    ei.choice.select(failMode);
+	    return ei;
+	}
+	return null;
+    }
+
+    void setRatingEditValue(int n, EditInfo ei) {
+	if (n == 0 && ei.value >= 0) ratedPower = ei.value;
+	if (n == 1 && ei.value >= 0) ratedVoltage = ei.value;
+	if (n == 2 && ei.value >= 0) ratedCurrent = ei.value;
+	if (n == 3 && ei.value >= 0) ratingTau = ei.value;
+	if (n == 4) failMode = ei.choice.getSelectedIndex();
+	// editing a part repairs it
+	resetRating();
+    }
+
+    // draw warning triangle / burned X on top of the element
+    void drawRatingOverlay(Graphics g) {
+	if (!supportsRatings() || point1 == null)
+	    return;
+	if (failed) {
+	    Point c = interpPoint(point1, point2, .5);
+	    int s = 9;
+	    g.context.save();
+	    g.context.setStrokeStyle("#ff2020");
+	    g.context.setLineWidth(4);
+	    g.context.beginPath();
+	    g.context.moveTo(c.x-s, c.y-s); g.context.lineTo(c.x+s, c.y+s);
+	    g.context.moveTo(c.x+s, c.y-s); g.context.lineTo(c.x-s, c.y+s);
+	    g.context.stroke();
+	    g.context.restore();
+	    return;
+	}
+	if (hasRatings() && stress >= RATING_WARN) {
+	    Point c = interpPoint(point1, point2, .5, -22);
+	    int s = 9;
+	    g.context.save();
+	    g.context.setFillStyle("#ffd000");
+	    g.context.setStrokeStyle("#000000");
+	    g.context.setLineWidth(1.5);
+	    g.context.beginPath();
+	    g.context.moveTo(c.x, c.y-s);
+	    g.context.lineTo(c.x+s, c.y+s*.8);
+	    g.context.lineTo(c.x-s, c.y+s*.8);
+	    g.context.closePath();
+	    g.context.fill();
+	    g.context.stroke();
+	    g.context.setFillStyle("#000000");
+	    g.context.setFont("bold 11px sans-serif");
+	    g.context.setTextAlign("center");
+	    g.context.fillText("!", c.x, c.y+s*.65);
+	    g.context.restore();
+	}
     }
     
     // calculate current in response to node voltages changing
