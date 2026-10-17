@@ -64,7 +64,12 @@ package com.lushprojects.circuitjs1.client;
 	    current = volts[0] = volts[1] = curcount = 0;
 	    ind.reset();
 	}
-	void stamp() { ind.stamp(nodes[0], nodes[1]); }
+	boolean supportsTolerance() { return true; }
+	double getEffInductance() { return inductance*tolFactor(); }
+	void stamp() {
+	    ind.setup(getEffInductance(), current, flags);
+	    ind.stamp(nodes[0], nodes[1]);
+	}
 	void startIteration() {
 	    ind.startIteration(volts[0]-volts[1]);
 	}
@@ -81,6 +86,8 @@ package com.lushprojects.circuitjs1.client;
 	    arr[0] = "inductor";
 	    getBasicInfo(arr);
 	    arr[3] = "L = " + getUnitText(inductance, "H");
+	    if (tolFactor() != 1)
+		arr[3] += " \u2192 " + getUnitText(getEffInductance(), "H");
 	    arr[4] = "P = " + getUnitText(getPower(), "W");
 	}
 	public EditInfo getEditInfo(int n) {

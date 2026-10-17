@@ -25,6 +25,8 @@ import com.google.gwt.canvas.dom.client.CanvasGradient;
 	double resistance;
 	public ResistorElm(int xx, int yy) { super(xx, yy); resistance = 1000; ratedPower = 0.0625; }  // 1/16 W, typical 0402
 	boolean supportsRatings() { return true; }
+	boolean supportsTolerance() { return true; }
+	double getEffResistance() { return resistance*tolFactor(); }
 	public ResistorElm(int xa, int ya, int xb, int yb, int f,
 		    StringTokenizer st) {
 	    super(xa, ya, xb, yb, f);
@@ -89,16 +91,18 @@ import com.google.gwt.canvas.dom.client.CanvasGradient;
 	}
 
 	void calculateCurrent() {
-	    current = (volts[0]-volts[1])/resistance;
+	    current = (volts[0]-volts[1])/getEffResistance();
 	    //System.out.print(this + " res current set to " + current + "\n");
 	}
 	void stamp() {
-	    sim.stampResistor(nodes[0], nodes[1], resistance);
+	    sim.stampResistor(nodes[0], nodes[1], getEffResistance());
 	}
 	void getInfo(String arr[]) {
 	    arr[0] = "resistor";
 	    getBasicInfo(arr);
 	    arr[3] = "R = " + getUnitText(resistance, sim.ohmString);
+	    if (tolFactor() != 1)
+		arr[3] += " \u2192 " + getUnitText(getEffResistance(), sim.ohmString);
 	    arr[4] = "P = " + getUnitText(getPower(), "W");
 	}
 	@Override String getScopeText(int v) {

@@ -55,18 +55,34 @@ class EditDialog extends DialogBox  {
 	boolean hasRatingFields() {
 	    return elm instanceof CircuitElm && ((CircuitElm) elm).supportsRatings();
 	}
+	int tolFieldCount() {
+	    return (elm instanceof CircuitElm && ((CircuitElm) elm).supportsTolerance()) ? 1 : 0;
+	}
+	// order: the part's own fields, then tolerance, then ratings
 	EditInfo getField(int i) {
 	    if (i < elmFieldCount)
 		return elm.getEditInfo(i);
+	    i -= elmFieldCount;
+	    if (i < tolFieldCount())
+		return ((CircuitElm) elm).getToleranceEditInfo(i);
+	    i -= tolFieldCount();
 	    if (hasRatingFields())
-		return ((CircuitElm) elm).getRatingEditInfo(i-elmFieldCount);
+		return ((CircuitElm) elm).getRatingEditInfo(i);
 	    return null;
 	}
 	void setField(int i, EditInfo ei) {
-	    if (i < elmFieldCount)
+	    if (i < elmFieldCount) {
 		elm.setEditValue(i, ei);
-	    else if (hasRatingFields())
-		((CircuitElm) elm).setRatingEditValue(i-elmFieldCount, ei);
+		return;
+	    }
+	    i -= elmFieldCount;
+	    if (i < tolFieldCount()) {
+		((CircuitElm) elm).setToleranceEditValue(i, ei);
+		return;
+	    }
+	    i -= tolFieldCount();
+	    if (hasRatingFields())
+		((CircuitElm) elm).setRatingEditValue(i, ei);
 	}
 	final int barmax = 1000;
 	VerticalPanel vp;

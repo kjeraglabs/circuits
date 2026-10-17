@@ -54,6 +54,7 @@ class Toolbar extends FlowPanel {
     }
 
     CirSim sim;
+    Label toleranceButton;
     ArrayList<Button> buttons = new ArrayList<Button>();
     String lastActive = "";
     Button openPalette;
@@ -83,6 +84,15 @@ class Toolbar extends FlowPanel {
 	addCommand("zoom-11", "Zoom 100%", "key", "zoom100");
 	addCommand("zoom-in", "Zoom in (+)", "key", "zoomin");
 	addCommand("zoom-out", "Zoom out (-)", "key", "zoomout");
+	addSeparator();
+	toleranceButton = makeButtonLabel("Tolerance testing: try worst-case values of parts with a tolerance");
+	toleranceButton.getElement().setInnerHTML(svg(toleranceIcon, 24));
+	addHover(toleranceButton, null);
+	toleranceButton.addClickHandler(new ClickHandler() {
+	    public void onClick(ClickEvent e) {
+		sim.menuPerformed("edit", "tolerance");
+	    }
+	});
 	addSeparator();
 
 	addPart("Wire", new String[] { "WireElm" }, new String[] { wireIcon });
@@ -287,6 +297,12 @@ class Toolbar extends FlowPanel {
 	hideTimer = null;
     }
 
+    void setToleranceActive(boolean on) {
+	Style st = toleranceButton.getElement().getStyle();
+	st.setProperty("background", on ? ACTIVE_BG : "transparent");
+	st.setProperty("color", on ? HOVER : INK);
+    }
+
     // highlight the button for the part being placed; called every frame, cheap when nothing changed
     void update(String activeClass) {
 	if (activeClass == null)
@@ -332,6 +348,8 @@ class Toolbar extends FlowPanel {
 	"<text x='15.5' y='15' font-size='8' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='currentColor'>O</text></svg>";
     static final String aoutIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linejoin='round'>" +
 	"<path d='M1 12h5'/><path d='M6 12l5-5.5h11v11H11z'/><path d='M12.5 12.5c1-2.5 2-2.5 3 0s2 2.5 3 0'/></g></svg>";
+    static final String toleranceIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>" +
+	"<path d='M1 15h3l1-2.5 2 5 2-5 2 5 2-5 1 2.5h3'/><path d='M20 3v6M17 6h6M17 12h6'/></g></svg>";
     static final String labelIcon = "<svg><g fill='none' stroke='currentColor' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>" +
 	"<path d='M1 12h4'/><path d='M5 8h12l5 4-5 4H5z'/></g></svg>";
 

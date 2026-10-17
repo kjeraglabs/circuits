@@ -30,6 +30,15 @@ can be given a max power, max voltage and max current in their edit dialog
 
 All four support component ratings.
 
+**Tolerance testing** (Edit > Tolerance Testing, or the toolbar button with the resistor and ±)
+
+Resistors, capacitors and inductors have a Tolerance (%) setting (0 = none). In tolerance testing
+mode each part with a tolerance gets an up/down switch beside it: up uses the value + tolerance,
+down the value - tolerance, and clicking the lit half again goes back to nominal. The info box
+shows the value in use. "All nominal" resets every switch; "Exit tolerance testing" leaves the
+mode. The mode and switch positions are saved with the circuit, so an exported link opens in
+tolerance testing mode. Saved as `906 percent position` after each part and `907 1` for the mode.
+
 **Toolbar**
 
 The toolbar under the menu has edit and zoom buttons and one button per common part. Click a

@@ -42,6 +42,8 @@ package com.lushprojects.circuitjs1.client;
 	    } catch (Exception e) {}
 	}
 	boolean supportsRatings() { return true; }
+	boolean supportsTolerance() { return true; }
+	double getEffCapacitance() { return capacitance*tolFactor(); }
 	boolean isTrapezoidal() { return (flags & FLAG_BACK_EULER) == 0; }
 	void setNodeVoltage(int n, double c) {
 	    super.setNodeVoltage(n, c);
@@ -127,9 +129,9 @@ package com.lushprojects.circuitjs1.client;
 	    // than backward euler but can cause oscillatory behavior
 	    // if RC is small relative to the timestep.
 	    if (isTrapezoidal())
-		compResistance = sim.timeStep/(2*capacitance);
+		compResistance = sim.timeStep/(2*getEffCapacitance());
 	    else
-		compResistance = sim.timeStep/capacitance;
+		compResistance = sim.timeStep/getEffCapacitance();
 	    sim.stampResistor(nodes[0], nodes[1], compResistance);
 	    sim.stampRightSide(nodes[0]);
 	    sim.stampRightSide(nodes[1]);
@@ -162,6 +164,8 @@ package com.lushprojects.circuitjs1.client;
 	    arr[0] = "capacitor";
 	    getBasicInfo(arr);
 	    arr[3] = "C = " + getUnitText(capacitance, "F");
+	    if (tolFactor() != 1)
+		arr[3] += " \u2192 " + getUnitText(getEffCapacitance(), "F");
 	    arr[4] = "P = " + getUnitText(getPower(), "W");
 	    //double v = getVoltageDiff();
 	    //arr[4] = "U = " + getUnitText(.5*capacitance*v*v, "J");

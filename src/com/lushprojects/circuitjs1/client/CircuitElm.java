@@ -350,6 +350,168 @@ public abstract class CircuitElm implements Editable {
 	resetRating();
     }
 
+    // ---------------------------------------------------------------
+    // Tolerance testing (Kjerag Labs addition)
+    //
+    // Passive parts can have a tolerance (fraction, 0 = none). In tolerance
+    // testing mode each such part gets an up/down switch: up uses
+    // value*(1+tol), down value*(1-tol), middle the nominal value.
+    // Saved as an extra "906 percent dev" line after the part.
+    // ---------------------------------------------------------------
+    static final int TOLERANCE_DUMP_TYPE = 906;
+    double tolerance;
+    int tolDev;   // -1 down, 0 nominal, +1 up
+
+    boolean supportsTolerance() { return false; }
+
+    boolean hasTolerance() { return supportsTolerance() && tolerance > 0; }
+
+    // multiply the nominal value by this when stamping
+    double tolFactor() {
+	if (!sim.toleranceMode || !hasTolerance())
+	    return 1;
+	return 1 + tolDev*tolerance;
+    }
+
+    // called after tolDev or the mode changes, for parts that cache their value
+    void toleranceChanged() {}
+
+    String dumpTolerance() {
+	if (!hasTolerance())
+	    return null;
+	return TOLERANCE_DUMP_TYPE + " " + tolerance*100 + " " + tolDev;
+    }
+
+    void undumpTolerance(StringTokenizer st) {
+	tolerance = new Double(st.nextToken()).doubleValue()/100;
+	tolDev = new Integer(st.nextToken()).intValue();
+	if (tolDev > 1 || tolDev < -1)
+	    tolDev = 0;
+    }
+
+    EditInfo getToleranceEditInfo(int n) {
+	if (n == 0)
+	    return new EditInfo("Tolerance (%) (0 = none)", tolerance*100).disallowSliders();
+	return null;
+    }
+
+    void setToleranceEditValue(int n, EditInfo ei) {
+	if (n == 0 && ei.value >= 0 && ei.value < 100) {
+	    tolerance = ei.value/100;
+	    if (tolerance == 0)
+		tolDev = 0;
+	    toleranceChanged();
+	}
+    }
+
+    // e.g. "+5%" for the info box, or null
+    String getToleranceInfo() {
+	if (!hasTolerance())
+	    return null;
+	String pct = showFormat.format(tolerance*100) + "%";
+	if (!sim.toleranceMode || tolDev == 0)
+	    return "tolerance \u00b1" + pct + (sim.toleranceMode ? ", at nominal" : "");
+	return "tolerance \u00b1" + pct + ", testing " + (tolDev > 0 ? "+" : "\u2212") + pct;
+    }
+
+    // centre of the up/down switch: beside the part, on the opposite side from its value label
+    Point toleranceSwitchCenter() {
+	int xc = (x+x2)/2, yc = (y+y2)/2;
+	int d = 24;
+	if (dy == 0)
+	    return new Point(xc, yc + d);
+	if (dx == 0) {
+	    boolean labelLeft = (this instanceof VoltageElm || (x < x2 && y > y2));
+	    return new Point(labelLeft ? xc + d : xc - d, yc);
+	}
+	return interpPoint(point1, point2, .5, d);
+    }
+
+    static final int TOL_W = 12, TOL_H = 28;
+
+    Rectangle toleranceSwitchRect() {
+	Point c = toleranceSwitchCenter();
+	return new Rectangle(c.x - TOL_W/2 - 2, c.y - TOL_H/2 - 2, TOL_W + 4, TOL_H + 4);
+    }
+
+    // click at (gx, gy): returns true if it hit this part's switch
+    boolean toleranceClick(int gx, int gy) {
+	if (!sim.toleranceMode || !hasTolerance() || point1 == null)
+	    return false;
+	Rectangle r = toleranceSwitchRect();
+	if (!r.contains(gx, gy))
+	    return false;
+	Point c = toleranceSwitchCenter();
+	int want = (gy < c.y) ? 1 : -1;
+	tolDev = (tolDev == want) ? 0 : want;   // clicking the active half goes back to nominal
+	toleranceChanged();
+	return true;
+    }
+
+    void drawToleranceSwitch(Graphics g) {
+	if (!sim.toleranceMode || !hasTolerance() || point1 == null)
+	    return;
+	Point c = toleranceSwitchCenter();
+	double x0 = c.x - TOL_W/2., y0 = c.y - TOL_H/2.;
+	String ink = lightGrayColor.getHexValue();
+	String bg = sim.getBackgroundColor().getHexValue();
+	g.context.save();
+	// body
+	g.context.setFillStyle(bg);
+	g.context.setStrokeStyle(ink);
+	g.context.setLineWidth(1.2);
+	roundRect(g, x0, y0, TOL_W, TOL_H, 4);
+	g.context.fill();
+	g.context.stroke();
+	// active half
+	if (tolDev != 0) {
+	    g.context.setFillStyle((tolDev > 0 ? positiveColor : negativeColor).getHexValue());
+	    roundRect(g, x0 + 1.5, tolDev > 0 ? y0 + 1.5 : c.y + .5, TOL_W - 3, TOL_H/2. - 2, 3);
+	    g.context.fill();
+	}
+	// divider and arrows
+	g.context.beginPath();
+	g.context.moveTo(x0 + 2, c.y);
+	g.context.lineTo(x0 + TOL_W - 2, c.y);
+	g.context.stroke();
+	drawTriangle(g, c.x, y0 + 4, c.y - 3, tolDev > 0 ? "#ffffff" : ink);
+	drawTriangle(g, c.x, y0 + TOL_H - 4, c.y + 3, tolDev < 0 ? "#ffffff" : ink);
+	// percentage next to the switch when not nominal
+	if (tolDev != 0) {
+	    String s = (tolDev > 0 ? "+" : "\u2212") + showFormat.format(tolerance*100) + "%";
+	    g.context.setFont("bold 10px sans-serif");
+	    g.context.setFillStyle((tolDev > 0 ? positiveColor : negativeColor).getHexValue());
+	    g.context.setTextAlign("center");
+	    g.context.fillText(s, c.x, tolDev > 0 ? y0 - 3 : y0 + TOL_H + 10);
+	}
+	g.context.restore();
+    }
+
+    static void roundRect(Graphics g, double x, double y, double w, double h, double r) {
+	g.context.beginPath();
+	g.context.moveTo(x + r, y);
+	g.context.lineTo(x + w - r, y);
+	g.context.arcTo(x + w, y, x + w, y + r, r);
+	g.context.lineTo(x + w, y + h - r);
+	g.context.arcTo(x + w, y + h, x + w - r, y + h, r);
+	g.context.lineTo(x + r, y + h);
+	g.context.arcTo(x, y + h, x, y + h - r, r);
+	g.context.lineTo(x, y + r);
+	g.context.arcTo(x, y, x + r, y, r);
+	g.context.closePath();
+    }
+
+    // small triangle with its tip at (cx, tipY) and base at baseY
+    static void drawTriangle(Graphics g, double cx, double tipY, double baseY, String color) {
+	g.context.setFillStyle(color);
+	g.context.beginPath();
+	g.context.moveTo(cx, tipY);
+	g.context.lineTo(cx + 3.5, baseY);
+	g.context.lineTo(cx - 3.5, baseY);
+	g.context.closePath();
+	g.context.fill();
+    }
+
     // draw warning triangle / burned X on top of the element
     void drawRatingOverlay(Graphics g) {
 	if (!supportsRatings() || point1 == null)

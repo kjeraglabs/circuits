@@ -126,6 +126,9 @@ MouseOutHandler, MouseWheelHandler {
     CheckboxMenuItem printableCheckItem;
     CheckboxMenuItem paperCheckItem;
     CheckboxMenuItem toolbarCheckItem;
+    CheckboxMenuItem toleranceCheckItem;
+    boolean toleranceMode;
+    ToleranceBanner toleranceBanner;
     Toolbar toolbar;
     CheckboxMenuItem conventionCheckItem;
     CheckboxMenuItem noEditCheckItem;
@@ -320,6 +323,8 @@ MouseOutHandler, MouseWheelHandler {
 		}
 
     	setCircuitArea();
+    	if (toleranceBanner != null)
+    	    toleranceBanner.position();
     }
     
     // Kjerag Labs logo, faint, in the bottom-right corner of the circuit area
@@ -345,6 +350,56 @@ MouseOutHandler, MouseWheelHandler {
 	g.context.setGlobalAlpha(isLightBackground() ? .45 : .35);
 	g.context.drawImage(img, circuitArea.width - w - 16, circuitArea.height - h - 14, w, h);
 	g.context.restore();
+    }
+
+    // ---- tolerance testing mode ----
+    static final int TOLERANCE_MODE_DUMP_TYPE = 907;
+    boolean readToleranceMode;
+
+    void setToleranceMode(boolean on) {
+	toleranceMode = on;
+	if (toleranceCheckItem != null)
+	    toleranceCheckItem.setState(on);
+	int i;
+	for (i = 0; i != elmList.size(); i++)
+	    getElm(i).toleranceChanged();
+	if (toleranceBanner != null)
+	    toleranceBanner.update();
+	if (toolbar != null)
+	    toolbar.setToleranceActive(on);
+	needAnalyze();
+    }
+
+    int countToleranceParts() {
+	int i, n = 0;
+	for (i = 0; i != elmList.size(); i++)
+	    if (getElm(i).hasTolerance())
+		n++;
+	return n;
+    }
+
+    // put every switch back in the middle
+    void resetToleranceSwitches() {
+	int i;
+	for (i = 0; i != elmList.size(); i++) {
+	    getElm(i).tolDev = 0;
+	    getElm(i).toleranceChanged();
+	}
+	needAnalyze();
+    }
+
+    boolean doToleranceSwitch(int gx, int gy) {
+	if (!toleranceMode)
+	    return false;
+	int i;
+	for (i = 0; i != elmList.size(); i++)
+	    if (getElm(i).toleranceClick(gx, gy)) {
+		needAnalyze();
+		if (toleranceBanner != null)
+		    toleranceBanner.update();
+		return true;
+	    }
+	return false;
     }
 
     boolean isToolbarShown() {
@@ -532,6 +587,11 @@ MouseOutHandler, MouseWheelHandler {
 
 	m.addSeparator();
 	m.addItem(selectAllItem = menuItemWithShortcut("select-all", LS("Select All"), LS("Ctrl-A"), new MyCommand("edit","selectAll")));
+	m.addItem(toleranceCheckItem = new CheckboxMenuItem(LS("Tolerance Testing"),
+		new Command() { public void execute(){
+		    setToleranceMode(toleranceCheckItem.getState());
+		}
+	}));
 	m.addItem(menuItemWithShortcut("", LS("Rotate 90\u00b0"), "R", new MyCommand("edit","rotate")));
 	m.addItem(menuItemWithShortcut("", LS("Mirror Left/Right"), "X", new MyCommand("edit","mirrorx")));
 	m.addItem(menuItemWithShortcut("", LS("Mirror Up/Down"), "Y", new MyCommand("edit","mirrory")));
@@ -672,6 +732,8 @@ MouseOutHandler, MouseWheelHandler {
 	    layoutPanel.setWidgetHidden(toolbar, !toolbarCheckItem.getState());
 	}
 	RootLayoutPanel.get().add(layoutPanel);
+	toleranceBanner = new ToleranceBanner(this);
+	RootPanel.get().add(toleranceBanner);
 
 	cv =Canvas.createIfSupported();
 	if (cv==null) {
@@ -1525,8 +1587,10 @@ MouseOutHandler, MouseWheelHandler {
 	      g.setColor(Color.white);*/
 	    getElm(i).draw(g);
 	}
-	for (i = 0; i != elmList.size(); i++)
+	for (i = 0; i != elmList.size(); i++) {
 	    getElm(i).drawRatingOverlay(g);
+	    getElm(i).drawToleranceSwitch(g);
+	}
 	mydrawtime+=System.currentTimeMillis()-mydrawstarttime;
 	
 	// draw posts normally
@@ -1612,12 +1676,14 @@ MouseOutHandler, MouseWheelHandler {
 	    if (mouseElm != null) {
 		if (mousePost == -1) {
 		    mouseElm.getInfo(info);
-		    String rinfo = mouseElm.getRatingInfo();
-		    if (rinfo != null) {
+		    String extra[] = { mouseElm.getToleranceInfo(), mouseElm.getRatingInfo() };
+		    for (String x : extra) {
+			if (x == null)
+			    continue;
 			int ri;
 			for (ri = 0; ri < info.length-1 && info[ri] != null; ri++)
 			    ;
-			info[ri] = rinfo;
+			info[ri] = x;
 		    }
 		    info[0] = LS(info[0]);
 		    if (info[1] != null)
@@ -3175,6 +3241,8 @@ MouseOutHandler, MouseWheelHandler {
     	    clearSelection();
     	    menuElm.setSelected(true);
     	}
+    	if (item=="tolerance")
+    	    setToleranceMode(!toleranceMode);
     	if (item=="rotate")
     	    transformSelection(XFORM_ROTATE);
     	if (item=="mirrorx")
@@ -3551,6 +3619,9 @@ MouseOutHandler, MouseWheelHandler {
 	String r = ce.dumpRating();
 	if (r != null)
 	    d += r + "\n";
+	String t = ce.dumpTolerance();
+	if (t != null)
+	    d += t + "\n";
 	return d;
     }
 
@@ -3584,6 +3655,9 @@ MouseOutHandler, MouseWheelHandler {
 	    if (d != null)
 		dump += d + "\n";
 	}
+	// tolerance testing mode is part of the circuit, so shared links open in it
+	if (toleranceMode)
+	    dump += TOLERANCE_MODE_DUMP_TYPE + " 1\n";
 	for (i = 0; i != adjustables.size(); i++) {
 	    Adjustable adj = adjustables.get(i);
 	    dump += "38 " + adj.dump() + "\n";
@@ -3810,6 +3884,7 @@ MouseOutHandler, MouseWheelHandler {
 	}
 	boolean subs = (flags & RC_SUBCIRCUITS) != 0;
 	CircuitElm lastReadElm = null;
+	readToleranceMode = false;
 	//cv.repaint();
 	int p;
 	for (p = 0; p < len; ) {
@@ -3872,6 +3947,15 @@ MouseOutHandler, MouseWheelHandler {
 			    lastReadElm.undumpRating(st);
 			break;
 		    }
+		    if (tint == CircuitElm.TOLERANCE_DUMP_TYPE) {
+			if (lastReadElm != null)
+			    lastReadElm.undumpTolerance(st);
+			break;
+		    }
+		    if (tint == TOLERANCE_MODE_DUMP_TYPE) {
+			readToleranceMode = new Integer(st.nextToken()).intValue() != 0;
+			break;
+		    }
 		    if (tint == 38) {
 			Adjustable adj = new Adjustable(st, this);
 			adjustables.add(adj);
@@ -3907,6 +3991,8 @@ MouseOutHandler, MouseWheelHandler {
 	}
 	setPowerBarEnable();
 	enableItems();
+	if ((flags & RC_RETAIN) == 0)
+	    setToleranceMode(readToleranceMode);
 	if ((flags & RC_RETAIN) == 0) {
 	    // create sliders as needed
 	    for (i = 0; i != adjustables.size(); i++)
@@ -4713,6 +4799,10 @@ MouseOutHandler, MouseWheelHandler {
 
 	int gx = inverseTransformX(e.getX());
 	int gy = inverseTransformY(e.getY());
+	if (doToleranceSwitch(gx, gy)) {
+	    didSwitch = true;
+	    return;
+	}
 	if (doSwitch(gx, gy)) {
 	    // do this BEFORE we change the mouse mode to MODE_DRAG_POST!  Or else logic inputs
 	    // will add dots to the whole circuit when we click on them!
