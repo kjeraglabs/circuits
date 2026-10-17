@@ -389,7 +389,7 @@ MouseOutHandler, MouseWheelHandler {
 	    hideSidebar = qp.getBooleanValue("hideSidebar", false);
 	    hideMenu = qp.getBooleanValue("hideMenu", false);
 	    printable = qp.getBooleanValue("whiteBackground", getOptionFromStorage("whiteBackground", false));
-	    paper = qp.getBooleanValue("paper", getOptionFromStorage("paperTheme", false));
+	    paper = qp.getBooleanValue("paper", getOptionFromStorage("paperTheme", true));
 	    convention = qp.getBooleanValue("conventionalCurrent",
 		    getOptionFromStorage("conventionalCurrent", true));
 	    noEditing = !qp.getBooleanValue("editable", true);

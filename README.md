@@ -39,9 +39,15 @@ its output current from V+ or returns it to V-, so supplies carry the load curre
 
 **Paper theme**
 
-Options > Paper Theme gives a beige paper background with light red for positive voltage,
+Paper is the default theme. Options > Paper Theme gives a beige paper background with light red for positive voltage,
 gray for neutral and light blue for negative. The choice is remembered per browser, and
 `?paper=true` in the URL turns it on for a link.
+
+**LEDs**
+
+LEDs are drawn as a diode with two emission arrows. The triangle, bar and arrows take the
+LED's colour and get brighter with current. Set the colour in the edit dialog as a hex code,
+with the colour picker next to it, or with one of the preset swatches.
 
 **Sharing circuits**
 
