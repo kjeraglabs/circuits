@@ -25,6 +25,9 @@ abstract class ChipElm extends CircuitElm {
 	final int FLAG_SMALL = 1;
 	final int FLAG_FLIP_X = 1024;
 	final int FLAG_FLIP_Y = 2048;
+	boolean canRotate() { return false; }
+	void mirrorFlagX() { flags ^= FLAG_FLIP_X; setPoints(); }
+	void mirrorFlagY() { flags ^= FLAG_FLIP_Y; setPoints(); }
 	public ChipElm(int xx, int yy) {
 	    super(xx, yy);
 	    if (needsBits())

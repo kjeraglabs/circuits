@@ -55,6 +55,7 @@ class ProbeElm extends CircuitElm {
 	} catch (Exception e) {}
     }
     int getDumpType() { return 'p'; }
+    int getShortcut() { return 'V'; }
     String dump() {
         return super.dump() + " " + meter + " " + scale;
     }

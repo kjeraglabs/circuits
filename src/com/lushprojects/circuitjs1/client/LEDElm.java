@@ -130,7 +130,7 @@ package com.lushprojects.circuitjs1.client;
 		maxBrightnessCurrent = ei.value;
 	    super.setEditValue(n-4, ei);
 	}
-	int getShortcut() { return 'l'; }
+	int getShortcut() { return 'D'; }
 	
 	void setLastModelName(String n) {
 	    lastLEDModelName = n;

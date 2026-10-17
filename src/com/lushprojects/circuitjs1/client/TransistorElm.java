@@ -141,6 +141,7 @@ class TransistorElm extends CircuitElm {
 	    return (volts[0]-volts[2])*ib + (volts[1]-volts[2])*ic;
 	}
 
+	void flipSide() { flags ^= FLAG_FLIP; }
 	Point rect[], coll[], emit[], base;
 	void setPoints() {
 	    super.setPoints();

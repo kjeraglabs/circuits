@@ -1172,6 +1172,58 @@ public abstract class CircuitElm implements Editable {
 	    return current;
     }
     
+    // ---- rotate / mirror support (Kjerag Labs addition) ----
+    // Most parts are defined by two points plus a flag saying which side of the
+    // point1->point2 axis their extra pins go on.  The side is also scaled by
+    // dsign, so reversing the axis keeps pins on the same screen side.  After a
+    // rotation or mirror we toggle the side flag where needed so the result is a
+    // true rotated or mirrored copy.
+
+    // swap which side of the axis the part's extra pins are on.  No-op for symmetric parts.
+    void flipSide() {}
+    // swap the side of supply pins (op amp with supply pins only)
+    void flipSupplySide() {}
+    // false for parts placed by a single anchor point (chips); they are moved, not rotated
+    boolean canRotate() { return true; }
+    // mirror in place using the part's own flags (chips)
+    void mirrorFlagX() {}
+    void mirrorFlagY() {}
+
+    static int rawDsign(int x, int y, int x2, int y2) {
+	return (y2 == y) ? sign(x2-x) : sign(y2-y);
+    }
+
+    // rotate 90 degrees clockwise (on screen) around (cx, cy)
+    void rotatePoints(int cx, int cy) {
+	int d0 = rawDsign(x, y, x2, y2);
+	int nx  = cx - (y - cy),  ny  = cy + (x - cx);
+	int nx2 = cx - (y2 - cy), ny2 = cy + (x2 - cx);
+	x = nx; y = ny; x2 = nx2; y2 = ny2;
+	if (rawDsign(x, y, x2, y2) != d0) {
+	    flipSide();
+	    flipSupplySide();
+	}
+	setPoints();
+    }
+
+    // mirror left/right around the vertical line x = sum2/2
+    void mirrorPointsX(int sum2) {
+	int d0 = rawDsign(x, y, x2, y2);
+	x = sum2 - x; x2 = sum2 - x2;
+	if (rawDsign(x, y, x2, y2) == d0)
+	    flipSide();
+	setPoints();
+    }
+
+    // mirror top/bottom around the horizontal line y = sum2/2
+    void mirrorPointsY(int sum2) {
+	int d0 = rawDsign(x, y, x2, y2);
+	y = sum2 - y; y2 = sum2 - y2;
+	if (rawDsign(x, y, x2, y2) == d0)
+	    flipSide();
+	setPoints();
+    }
+
     void flipPosts() {
 	int oldx = x;
 	int oldy = y;

@@ -25,6 +25,7 @@ package com.lushprojects.circuitjs1.client;
 	int FLAG_SHOWVT = 2;
 	int FLAG_DIGITAL = 4;
 	int FLAG_FLIP = 8;
+	void flipSide() { flags ^= FLAG_FLIP; }
 	int FLAG_HIDE_BULK = 16;
 	int FLAG_BODY_DIODE = 32;
 	int FLAG_BODY_TERMINAL = 64;

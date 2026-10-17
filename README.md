@@ -14,6 +14,29 @@ can be given a max power, max voltage and max current in their edit dialog
   CircuitJS ignores these lines, so files work in both versions.
 * New resistors default to 0.25 W. New LEDs default to 30 mA and 5 V reverse.
 
+**Keyboard**
+
+| Key | Does |
+|---|---|
+| `v` | voltage source (1-terminal) |
+| `V` | voltmeter (2-terminal probe) |
+| `b` | battery (2-terminal voltage source) |
+| `a` | op amp |
+| `A` | op amp with V+ / V- supply pins |
+| `l` | net label: labels with the same name are connected |
+| `D` | LED (moved from `l`) |
+| `r` | rotate 90 degrees |
+| `x` | mirror left/right |
+| `y` | mirror up/down |
+
+`r`, `x` and `y` act on the selection, or on the part under the mouse when nothing is
+selected. With nothing selected or hovered, `r` still places a resistor. The same actions are in
+the Edit menu and the right-click menu. Mirroring an op amp up/down swaps its inputs but keeps
+V+ on top.
+
+The supply-pin op amp limits its output to the rails (minus an optional swing loss) and draws
+its output current from V+ or returns it to V-, so supplies carry the load current.
+
 **Paper theme**
 
 Options > Paper Theme gives a beige paper background with light red for positive voltage,

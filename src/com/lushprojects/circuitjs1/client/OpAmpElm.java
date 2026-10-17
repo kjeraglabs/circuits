@@ -121,6 +121,7 @@ package com.lushprojects.circuitjs1.client;
 	    triangle = createPolygon(tris[0], tris[1], lead2);
 	    plusFont = new Font("SansSerif", 0, opsize == 2 ? 14 : 10);
 	}
+	void flipSide() { flags ^= FLAG_SWAP; }
 	int getPostCount() { return 3; }
 	Point getPost(int n) {
 	    return (n == 0) ? in1p[0] : (n == 1) ? in2p[0] : point2;

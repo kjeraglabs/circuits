@@ -42,6 +42,7 @@ class LabeledNodeElm extends CircuitElm {
 	    text = CustomLogicModel.unescape(text); 
 	}
     }
+    int getShortcut() { return 'l'; }
     String dump() {
 	flags |= FLAG_ESCAPE;
 	return super.dump() + " " + CustomLogicModel.escape(text);

@@ -480,6 +480,9 @@ MouseOutHandler, MouseWheelHandler {
 
 	m.addSeparator();
 	m.addItem(selectAllItem = menuItemWithShortcut("select-all", LS("Select All"), LS("Ctrl-A"), new MyCommand("edit","selectAll")));
+	m.addItem(menuItemWithShortcut("", LS("Rotate 90\u00b0"), "R", new MyCommand("edit","rotate")));
+	m.addItem(menuItemWithShortcut("", LS("Mirror Left/Right"), "X", new MyCommand("edit","mirrorx")));
+	m.addItem(menuItemWithShortcut("", LS("Mirror Up/Down"), "Y", new MyCommand("edit","mirrory")));
 	m.addSeparator();
 	m.addItem(iconMenuItem("target", weAreInUS() ? "Center Circuit" : "Centre Circuit", new MyCommand("edit", "centrecircuit")));
 	m.addItem(menuItemWithShortcut("zoom-11", LS("Zoom 100%"), "0", new MyCommand("zoom", "zoom100")));
@@ -703,6 +706,9 @@ MouseOutHandler, MouseWheelHandler {
 	elmMenuBar.addItem(elmDeleteMenuItem = new MenuItem(LS("Delete"),new MyCommand("elm","delete")));
 	elmMenuBar.addItem(                    new MenuItem(LS("Duplicate"),new MyCommand("elm","duplicate")));
 	elmMenuBar.addItem(elmFlipMenuItem = new MenuItem(LS("Swap Terminals"),new MyCommand("elm","flip")));
+	elmMenuBar.addItem(menuItemWithShortcut("", LS("Rotate 90\u00b0"), "R", new MyCommand("elm","rotate")));
+	elmMenuBar.addItem(menuItemWithShortcut("", LS("Mirror Left/Right"), "X", new MyCommand("elm","mirrorx")));
+	elmMenuBar.addItem(menuItemWithShortcut("", LS("Mirror Up/Down"), "Y", new MyCommand("elm","mirrory")));
 	elmMenuBar.addItem(elmSplitMenuItem = menuItemWithShortcut("", LS("Split Wire"), LS(ctrlMetaKey + "-click"), new MyCommand("elm","split")));
 	elmMenuBar.addItem(elmSliderMenuItem = new MenuItem(LS("Sliders..."),new MyCommand("elm","sliders")));
 
@@ -1050,7 +1056,7 @@ MouseOutHandler, MouseWheelHandler {
 
     	MenuBar inputMenuBar = new MenuBar(true);
     	inputMenuBar.addItem(getClassCheckItem(LS("Add Ground"), "GroundElm"));
-    	inputMenuBar.addItem(getClassCheckItem(LS("Add Voltage Source (2-terminal)"), "DCVoltageElm"));
+    	inputMenuBar.addItem(getClassCheckItem(LS("Add Battery / Voltage Source (2-terminal)"), "DCVoltageElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add A/C Voltage Source (2-terminal)"), "ACVoltageElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add Voltage Source (1-terminal)"), "RailElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add A/C Voltage Source (1-terminal)"), "ACRailElm"));
@@ -1107,6 +1113,7 @@ MouseOutHandler, MouseWheelHandler {
     	MenuBar activeBlocMenuBar = new MenuBar(true);
     	activeBlocMenuBar.addItem(getClassCheckItem(LS("Add Op Amp (ideal, - on top)"), "OpAmpElm"));
     	activeBlocMenuBar.addItem(getClassCheckItem(LS("Add Op Amp (ideal, + on top)"), "OpAmpSwapElm"));
+    	activeBlocMenuBar.addItem(getClassCheckItem(LS("Add Op Amp (with supply pins)"), "OpAmpSupplyElm"));
     	activeBlocMenuBar.addItem(getClassCheckItem(LS("Add Op Amp (real)"), "OpAmpRealElm"));
     	activeBlocMenuBar.addItem(getClassCheckItem(LS("Add Analog Switch (SPST)"), "AnalogSwitchElm"));
     	activeBlocMenuBar.addItem(getClassCheckItem(LS("Add Analog Switch (SPDT)"), "AnalogSwitch2Elm"));
@@ -3087,6 +3094,18 @@ MouseOutHandler, MouseWheelHandler {
     	    doFlip();
     	if (item=="split")
     	    doSplit(menuElm);
+    	// from the right-click menu: act on the clicked part unless it's part of the selection
+    	if ((item=="rotate" || item=="mirrorx" || item=="mirrory") && menu=="elm" &&
+    		menuElm != null && !menuElm.isSelected()) {
+    	    clearSelection();
+    	    menuElm.setSelected(true);
+    	}
+    	if (item=="rotate")
+    	    transformSelection(XFORM_ROTATE);
+    	if (item=="mirrorx")
+    	    transformSelection(XFORM_MIRROR_X);
+    	if (item=="mirrory")
+    	    transformSelection(XFORM_MIRROR_Y);
     	if (item=="selectAll")
     		doSelectAll();
     	//	if (e.getSource() == exitItem) {
@@ -3147,7 +3166,7 @@ MouseOutHandler, MouseWheelHandler {
     	    newScope.setScopeElm(menuElm);
 	}
     	
-    	if (item.substring(0,10)=="addToScope" && menuElm != null) {
+    	if (item.startsWith("addToScope") && menuElm != null) {
     	    int n;
     	    n = Integer.parseInt(item.substring(10));
     	    if (n < scopeCount + countScopeElms()) {
@@ -4094,6 +4113,88 @@ MouseOutHandler, MouseWheelHandler {
     	needAnalyze();
     }
 
+    static final int XFORM_ROTATE = 0, XFORM_MIRROR_X = 1, XFORM_MIRROR_Y = 2;
+
+    // posts' bounding box as {minx, miny, maxx, maxy}
+    int[] postBounds(CircuitElm ce, int b[]) {
+	int i;
+	for (i = 0; i != ce.getPostCount(); i++) {
+	    Point p = ce.getPost(i);
+	    b[0] = Math.min(b[0], p.x); b[1] = Math.min(b[1], p.y);
+	    b[2] = Math.max(b[2], p.x); b[3] = Math.max(b[3], p.y);
+	}
+	if (ce.getPostCount() == 0) {
+	    b[0] = Math.min(b[0], Math.min(ce.x, ce.x2)); b[1] = Math.min(b[1], Math.min(ce.y, ce.y2));
+	    b[2] = Math.max(b[2], Math.max(ce.x, ce.x2)); b[3] = Math.max(b[3], Math.max(ce.y, ce.y2));
+	}
+	return b;
+    }
+
+    // rotate (90 deg clockwise) or mirror the selected parts as a group.
+    // returns false if nothing is selected.
+    boolean transformSelection(int mode) {
+	Vector<CircuitElm> sel = new Vector<CircuitElm>();
+	int i;
+	for (i = 0; i != elmList.size(); i++)
+	    if (getElm(i).isSelected() && !(getElm(i) instanceof ScopeElm))
+		sel.add(getElm(i));
+	if (sel.size() == 0 && mouseElm != null && !(mouseElm instanceof ScopeElm))
+	    sel.add(mouseElm);
+	if (sel.size() == 0)
+	    return false;
+	pushUndo();
+
+	// group extent: the two defining points of rotatable parts, post extent of chips
+	int b[] = { Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
+	for (CircuitElm ce : sel) {
+	    if (ce.canRotate()) {
+		b[0] = Math.min(b[0], Math.min(ce.x, ce.x2)); b[1] = Math.min(b[1], Math.min(ce.y, ce.y2));
+		b[2] = Math.max(b[2], Math.max(ce.x, ce.x2)); b[3] = Math.max(b[3], Math.max(ce.y, ce.y2));
+	    } else
+		postBounds(ce, b);
+	}
+	int sumx = b[0] + b[2], sumy = b[1] + b[3];   // twice the centre
+	int cx = sumx/2, cy = sumy/2;
+
+	for (CircuitElm ce : sel) {
+	    if (ce.canRotate()) {
+		if (mode == XFORM_ROTATE)
+		    ce.rotatePoints(cx, cy);
+		else if (mode == XFORM_MIRROR_X)
+		    ce.mirrorPointsX(sumx);
+		else
+		    ce.mirrorPointsY(sumy);
+		continue;
+	    }
+	    // chips can't rotate: mirror with their flags, and move their centre like a point
+	    int cb[] = postBounds(ce, new int[] { Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE });
+	    int ox = (cb[0]+cb[2])/2, oy = (cb[1]+cb[3])/2;
+	    int tx = ox, ty = oy;
+	    if (mode == XFORM_ROTATE) {
+		tx = cx - (oy - cy); ty = cy + (ox - cx);
+	    } else if (mode == XFORM_MIRROR_X) {
+		ce.mirrorFlagX(); tx = sumx - ox;
+	    } else {
+		ce.mirrorFlagY(); ty = sumy - oy;
+	    }
+	    int nb[] = postBounds(ce, new int[] { Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE });
+	    ce.move(snapGrid(tx - (nb[0]+nb[2])/2), snapGrid(ty - (nb[1]+nb[3])/2));
+	}
+
+	// rotating about a half-grid centre can leave parts off grid: shift the whole group back on
+	if (mode == XFORM_ROTATE) {
+	    CircuitElm f = sel.get(0);
+	    int ddx = snapGrid(f.x) - f.x, ddy = snapGrid(f.y) - f.y;
+	    if (ddx != 0 || ddy != 0)
+		for (CircuitElm ce : sel)
+		    ce.move(ddx, ddy);
+	}
+	needAnalyze();
+	unsavedChanges = true;
+	writeRecoveryToStorage();
+	return true;
+    }
+
     void doFlip() {
 	menuElm.flipPosts();
     	needAnalyze();
@@ -4621,6 +4722,10 @@ MouseOutHandler, MouseWheelHandler {
     		else {
     			elmList.addElement(dragElm);
     			dragElm.draggingDone();
+    			if (dragElm instanceof LabeledNodeElm) {
+    			    doEdit(dragElm);
+    			    editDialog.focusFirstField();
+    			}
     			circuitChanged = true;
     			writeRecoveryToStorage();
     			unsavedChanges = true;
@@ -5139,6 +5244,13 @@ MouseOutHandler, MouseWheelHandler {
     		}
     	}
     	if ((t&Event.ONKEYPRESS)!=0) {
+    		if ((cc=='r' || cc=='x' || cc=='y') && dragElm == null) {
+    		    int mode = (cc=='r') ? XFORM_ROTATE : (cc=='x') ? XFORM_MIRROR_X : XFORM_MIRROR_Y;
+    		    if (transformSelection(mode)) {
+    			e.cancel();
+    			return;
+    		    }
+    		}
     		if (cc>32 && cc<127){
     			String c=shortcuts[cc];
     			e.cancel();
@@ -5380,6 +5492,7 @@ MouseOutHandler, MouseWheelHandler {
     	case 203: return new DiacElm(x1, y1, x2, y2, f, st);
     	case 206: return new TriacElm(x1, y1, x2, y2, f, st);
     	case 207: return new LabeledNodeElm(x1, y1, x2, y2, f, st);
+    	case 901: return new OpAmpSupplyElm(x1, y1, x2, y2, f, st);
     	case 208: return new CustomLogicElm(x1, y1, x2, y2, f, st);
     	case 209: return new PolarCapacitorElm(x1, y1, x2, y2, f, st);   	
     	case 210: return new DataRecorderElm(x1, y1, x2, y2, f, st);
@@ -5497,6 +5610,8 @@ MouseOutHandler, MouseWheelHandler {
     		return (CircuitElm) new OpAmpElm(x1, y1);
     	if (n=="OpAmpSwapElm")
     		return (CircuitElm) new OpAmpSwapElm(x1, y1);
+    	if (n=="OpAmpSupplyElm")
+    		return (CircuitElm) new OpAmpSupplyElm(x1, y1);
     	if (n=="NMosfetElm" || n == "MosfetElm")
     		return (CircuitElm) new NMosfetElm(x1, y1);
     	if (n=="PMosfetElm")

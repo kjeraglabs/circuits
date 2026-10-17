@@ -309,6 +309,20 @@ class EditDialog extends DialogBox  {
 	    }
 	}
 	
+	// put the cursor in the first text field with its text selected
+	void focusFirstField() {
+	    int i;
+	    for (i = 0; i != einfocount; i++) {
+		final TextBox tb = einfos[i].textf;
+		if (tb == null)
+		    continue;
+		com.google.gwt.core.client.Scheduler.get().scheduleDeferred(new com.google.gwt.core.client.Scheduler.ScheduledCommand() {
+		    public void execute() { tb.setFocus(true); tb.selectAll(); }
+		});
+		return;
+	    }
+	}
+
 	public void resetDialog() {
 	    clearDialog();
 	    buildDialog();
