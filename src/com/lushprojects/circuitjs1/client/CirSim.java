@@ -62,6 +62,7 @@ import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.event.logical.shared.CloseEvent;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.canvas.dom.client.CanvasPattern;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.Style.Unit;
@@ -124,6 +125,8 @@ MouseOutHandler, MouseWheelHandler {
     CheckboxMenuItem euroGatesCheckItem;
     CheckboxMenuItem printableCheckItem;
     CheckboxMenuItem paperCheckItem;
+    CheckboxMenuItem toolbarCheckItem;
+    Toolbar toolbar;
     CheckboxMenuItem conventionCheckItem;
     CheckboxMenuItem noEditCheckItem;
     private Label powerLabel;
@@ -300,6 +303,8 @@ MouseOutHandler, MouseWheelHandler {
     	width=(int)RootLayoutPanel.get().getOffsetWidth();
     	height=(int)RootLayoutPanel.get().getOffsetHeight();
     	height=height-MENUBARHEIGHT;
+    	if (isToolbarShown())
+    	    height -= Toolbar.HEIGHT;
     	width=width-VERTICALPANELWIDTH;
 		if (cv != null) {
 			cv.setWidth(width + "PX");
@@ -317,6 +322,53 @@ MouseOutHandler, MouseWheelHandler {
     	setCircuitArea();
     }
     
+    // Kjerag Labs logo, faint, in the bottom-right corner of the circuit area
+    ImageElement logoDark, logoLight;
+
+    ImageElement loadLogo(String file) {
+	ImageElement img = Document.get().createImageElement();
+	img.setSrc(GWT.getHostPageBaseURL() + file);
+	return img;
+    }
+
+    void drawLogo(Graphics g) {
+	if (logoDark == null) {
+	    logoDark = loadLogo("kjerag-logo-dark.png");
+	    logoLight = loadLogo("kjerag-logo-light.png");
+	}
+	ImageElement img = isLightBackground() ? logoDark : logoLight;
+	if (img.getWidth() == 0 || circuitArea.height < 200)
+	    return;   // not loaded yet, or too little room
+	double h = 64;
+	double w = h*img.getWidth()/img.getHeight();
+	g.context.save();
+	g.context.setGlobalAlpha(isLightBackground() ? .45 : .35);
+	g.context.drawImage(img, circuitArea.width - w - 16, circuitArea.height - h - 14, w, h);
+	g.context.restore();
+    }
+
+    boolean isToolbarShown() {
+	return toolbar != null && toolbarCheckItem.getState();
+    }
+
+    void setToolbar() {
+	if (toolbar == null)
+	    return;
+	layoutPanel.setWidgetHidden(toolbar, !toolbarCheckItem.getState());
+	layoutPanel.forceLayout();
+	setCanvasSize();
+	repaint();
+    }
+
+    // menu text for a part class, for toolbar tooltips
+    String getLabelTextForClass(String cls) {
+	int i;
+	for (i = 0; i != mainMenuItemNames.size(); i++)
+	    if (mainMenuItemNames.get(i).equals(cls))
+		return mainMenuItems.get(i).getName().replaceFirst("^Add ", "");
+	return cls;
+    }
+
     void setCircuitArea() {
     	int height = cv.getCanvasElement().getHeight();
     	int width = cv.getCanvasElement().getWidth();
@@ -578,6 +630,14 @@ MouseOutHandler, MouseWheelHandler {
 	}));
 	paperCheckItem.setState(paper && !printable);
 
+	m.addItem(toolbarCheckItem = new CheckboxMenuItem(LS("Toolbar"),
+		new Command() { public void execute(){
+		    setOptionInStorage("toolbar", toolbarCheckItem.getState());
+		    setToolbar();
+		}
+	}));
+	toolbarCheckItem.setState(getOptionFromStorage("toolbar", true));
+
 	m.addItem(conventionCheckItem = new CheckboxMenuItem(LS("Conventional Current Motion"),
 		new Command() { public void execute(){
 		    setOptionInStorage("conventionalCurrent", conventionCheckItem.getState());
@@ -606,6 +666,11 @@ MouseOutHandler, MouseWheelHandler {
 	    VERTICALPANELWIDTH = 0;
 	else
 	    layoutPanel.addEast(verticalPanel, VERTICALPANELWIDTH);
+	if (!hideMenu && !noEditing) {
+	    toolbar = new Toolbar(this);
+	    layoutPanel.addNorth(toolbar, Toolbar.HEIGHT);
+	    layoutPanel.setWidgetHidden(toolbar, !toolbarCheckItem.getState());
+	}
 	RootLayoutPanel.get().add(layoutPanel);
 
 	cv =Canvas.createIfSupported();
@@ -1364,6 +1429,8 @@ MouseOutHandler, MouseWheelHandler {
 //	    return;
 	mystarttime=System.currentTimeMillis();
 	boolean didAnalyze = analyzeFlag;
+	if (toolbar != null)
+	    toolbar.update(mouseMode == MODE_ADD_ELM ? mouseModeStr : null);
 	if (analyzeFlag || dcAnalysisFlag) {
 	    analyzeCircuit();
 	    analyzeFlag = false;
@@ -1513,6 +1580,7 @@ MouseOutHandler, MouseWheelHandler {
 
 	
 	backcontext.setTransform(1, 0, 0, 1, 0, 0);
+	drawLogo(g);
 
 	fillBackground(g, 0, circuitArea.height, circuitArea.width, cv.getCoordinateSpaceHeight()-circuitArea.height);
 //	g.restore();

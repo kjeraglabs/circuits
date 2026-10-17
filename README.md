@@ -14,6 +14,14 @@ can be given a max power, max voltage and max current in their edit dialog
   CircuitJS ignores these lines, so files work in both versions.
 * New resistors default to 0.25 W. New LEDs default to 30 mA and 5 V reverse.
 
+**Toolbar**
+
+The toolbar under the menu has edit and zoom buttons and one button per common part. Click a
+part, then drag on the canvas to place it; click the button again to go back to select mode.
+Buttons with several variants (sources, switches, op amps, transistors, gates) show them on
+hover or tap. Options > Toolbar hides it. Part icons come from Paul Falstad's toolbar in
+[pfalstad/circuitjs1](https://github.com/pfalstad/circuitjs1).
+
 **Keyboard**
 
 | Key | Does |
