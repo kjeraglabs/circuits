@@ -2,6 +2,7 @@
 #   main -> https://circuits.kjeraglabs.no/       (live)
 #   dev  -> https://circuits.kjeraglabs.no/dev/   (staging, for testing before merging to main)
 # A push to either branch rebuilds both, since Pages hosts one site per repo.
+# Both branches must be allowed in Settings > Environments > github-pages.
 name: Build and deploy
 
 on:
@@ -14,19 +15,21 @@ permissions:
   pages: write
   id-token: write
 
+# Queue runs instead of cancelling: pushing main and dev together starts two
+# runs, and cancelling one could leave the site un-deployed.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -52,7 +55,7 @@ jobs:
       - name: Custom domain
         run: echo "circuits.kjeraglabs.no" > "$RUNNER_TEMP/site/CNAME"
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ${{ runner.temp }}/site
 
@@ -64,4 +67,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
