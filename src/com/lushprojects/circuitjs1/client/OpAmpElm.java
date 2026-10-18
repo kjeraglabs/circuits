@@ -35,6 +35,7 @@ package com.lushprojects.circuitjs1.client;
 	    gbw = 1e6;
            flags = FLAG_GAIN; // need to do this before setSize()
 	    gain = 100000;
+	    tolerance = .005;   // max input offset voltage, general-purpose op amp
            setSize(sim.smallGridCheckItem.getState() ? 1 : 2);
 	}
 	public OpAmpElm(int xa, int ya, int xb, int yb, int f,
@@ -142,13 +143,28 @@ package com.lushprojects.circuitjs1.client;
 
 	double lastvd;
 
+	// tolerance is the max input offset voltage: an extra +-Vos on the + input
+	boolean supportsTolerance() { return true; }
+	boolean toleranceAbsolute() { return true; }
+	String toleranceName() { return "input offset"; }
+	String toleranceEditLabel() { return "Max input offset voltage (V) (0 = none)"; }
+
+	// switch just outside the slanted edge, towards the output, clear of the inputs and supply pins
+	Point toleranceSwitchCenter() {
+	    Point p = interpPoint(point1, point2, .72, 2*opheight + 12);
+	    if (p.y < (y + y2)/2 || (dy != 0 && p.x < (x + x2)/2))
+		p = interpPoint(point1, point2, .72, -2*opheight - 12);
+	    return p;
+	}
+
 	void stamp() {
 	    int vn = sim.nodeList.size()+voltSource;
 	    sim.stampNonLinear(vn);
 	    sim.stampMatrix(nodes[2], vn, 1);
 	}
 	void doStep() {
-	    double vd = volts[1] - volts[0];
+	    double vos = tolOffset();
+	    double vd = volts[1] - volts[0] + vos;
 	    if (Math.abs(lastvd-vd) > .1)
 		sim.converged = false;
 	    else if (volts[2] > maxOut+.1 || volts[2] < minOut-.1)
@@ -170,7 +186,7 @@ package com.lushprojects.circuitjs1.client;
 	    sim.stampMatrix(vn, nodes[0], dx);
 	    sim.stampMatrix(vn, nodes[1], -dx);
 	    sim.stampMatrix(vn, nodes[2], 1);
-	    sim.stampRightSide(vn, x);
+	    sim.stampRightSide(vn, x + dx*vos);
 	    
 	    lastvd = vd;
 	    /*if (sim.converged)

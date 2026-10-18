@@ -40,12 +40,14 @@ All four support component ratings.
 **Tolerance testing** (Edit > Tolerance Testing, or the toolbar button with the resistor and ±)
 
 Resistors, capacitors and inductors have a Tolerance (%) setting (0 = none). New resistors
-default to 5% and new capacitors to 20%. In tolerance testing
+default to 5% and new capacitors to 20%. Active parts have one too:
+BJTs on hFE (default ±50%), MOSFETs/JFETs on the threshold voltage (default ±30%) and op amps
+a max input offset voltage (default 5 mV, added to the + input). In tolerance testing
 mode each part with a tolerance gets an up/down switch beside it: up uses the value + tolerance,
 down the value - tolerance, and clicking the lit half again goes back to nominal. The part's
 value label then shows the value in use, in red (up) or blue (down), and so does the info box. "All nominal" resets every switch; "Exit tolerance testing" leaves the
 mode. The mode and switch positions are saved with the circuit, so an exported link opens in
-tolerance testing mode. Saved as `906 percent position` after each part and `907 1` for the mode.
+tolerance testing mode. Saved as `906 amount position` after each part (percent, or volts for the op amp offset) and `907 1` for the mode.
 
 **Toolbar**
 

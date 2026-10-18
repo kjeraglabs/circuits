@@ -355,10 +355,13 @@ public abstract class CircuitElm implements Editable {
     // ---------------------------------------------------------------
     // Tolerance testing (Kjerag Labs addition)
     //
-    // Passive parts can have a tolerance (fraction, 0 = none). In tolerance
+    // Parts can have a tolerance (fraction, 0 = none). In tolerance
     // testing mode each such part gets an up/down switch: up uses
     // value*(1+tol), down value*(1-tol), middle the nominal value.
-    // Saved as an extra "906 percent dev" line after the part.
+    // Some parts use an absolute amount instead (op amp offset voltage):
+    // up adds +tol, down adds -tol.
+    // Saved as an extra "906 amount dev" line after the part (amount in %
+    // for relative tolerances, in base units for absolute ones).
     // ---------------------------------------------------------------
     static final int TOLERANCE_DUMP_TYPE = 906;
     double tolerance;
@@ -368,11 +371,32 @@ public abstract class CircuitElm implements Editable {
 
     boolean hasTolerance() { return supportsTolerance() && tolerance > 0; }
 
+    // true if the tolerance is an absolute amount (toleranceUnit) instead of a fraction
+    boolean toleranceAbsolute() { return false; }
+    String toleranceUnit() { return "V"; }
+    // what the tolerance applies to, for the info box ("hFE"), or null for the part's value
+    String toleranceName() { return null; }
+    String toleranceEditLabel() { return "Tolerance (%) (0 = none)"; }
+
     // multiply the nominal value by this when stamping
     double tolFactor() {
-	if (!sim.toleranceMode || !hasTolerance())
+	if (!sim.toleranceMode || !hasTolerance() || toleranceAbsolute())
 	    return 1;
 	return 1 + tolDev*tolerance;
+    }
+
+    // add this to the nominal value (absolute tolerances)
+    double tolOffset() {
+	if (!sim.toleranceMode || !hasTolerance() || !toleranceAbsolute())
+	    return 0;
+	return tolDev*tolerance;
+    }
+
+    // "5%" or "5 mV"
+    String toleranceText() {
+	if (toleranceAbsolute())
+	    return getUnitText(tolerance, toleranceUnit());
+	return showFormat.format(tolerance*100) + "%";
     }
 
     // called after tolDev or the mode changes, for parts that cache their value
@@ -381,25 +405,29 @@ public abstract class CircuitElm implements Editable {
     String dumpTolerance() {
 	if (!hasTolerance())
 	    return null;
-	return TOLERANCE_DUMP_TYPE + " " + tolerance*100 + " " + tolDev;
+	return TOLERANCE_DUMP_TYPE + " " + (toleranceAbsolute() ? tolerance : tolerance*100) + " " + tolDev;
     }
 
     void undumpTolerance(StringTokenizer st) {
-	tolerance = new Double(st.nextToken()).doubleValue()/100;
+	tolerance = new Double(st.nextToken()).doubleValue();
+	if (!toleranceAbsolute())
+	    tolerance /= 100;
 	tolDev = new Integer(st.nextToken()).intValue();
 	if (tolDev > 1 || tolDev < -1)
 	    tolDev = 0;
     }
 
     EditInfo getToleranceEditInfo(int n) {
+	if (n == 0 && toleranceAbsolute())
+	    return new EditInfo(toleranceEditLabel(), tolerance).disallowSliders();
 	if (n == 0)
-	    return new EditInfo("Tolerance (%) (0 = none)", tolerance*100).disallowSliders();
+	    return new EditInfo(toleranceEditLabel(), tolerance*100).disallowSliders();
 	return null;
     }
 
     void setToleranceEditValue(int n, EditInfo ei) {
-	if (n == 0 && ei.value >= 0 && ei.value < 100) {
-	    tolerance = ei.value/100;
+	if (n == 0 && ei.value >= 0 && (toleranceAbsolute() || ei.value < 100)) {
+	    tolerance = toleranceAbsolute() ? ei.value : ei.value/100;
 	    if (tolerance == 0)
 		tolDev = 0;
 	    toleranceChanged();
@@ -410,10 +438,11 @@ public abstract class CircuitElm implements Editable {
     String getToleranceInfo() {
 	if (!hasTolerance())
 	    return null;
-	String pct = showFormat.format(tolerance*100) + "%";
+	String pct = toleranceText();
+	String name = (toleranceName() == null) ? "tolerance" : toleranceName() + " tolerance";
 	if (!sim.toleranceMode || tolDev == 0)
-	    return "tolerance \u00b1" + pct + (sim.toleranceMode ? ", at nominal" : "");
-	return "tolerance \u00b1" + pct + ", testing " + (tolDev > 0 ? "+" : "\u2212") + pct;
+	    return name + " \u00b1" + pct + (sim.toleranceMode ? ", at nominal" : "");
+	return name + " \u00b1" + pct + ", testing " + (tolDev > 0 ? "+" : "\u2212") + pct;
     }
 
     // centre of the up/down switch: beside the part, on the opposite side from its value label
@@ -480,7 +509,7 @@ public abstract class CircuitElm implements Editable {
 	drawTriangle(g, c.x, y0 + TOL_H - 4, c.y + 3, tolDev < 0 ? "#ffffff" : ink);
 	// percentage next to the switch when not nominal
 	if (tolDev != 0) {
-	    String s = (tolDev > 0 ? "+" : "\u2212") + showFormat.format(tolerance*100) + "%";
+	    String s = (tolDev > 0 ? "+" : "\u2212") + toleranceText();
 	    g.context.setFont("bold 10px sans-serif");
 	    g.context.setFillStyle((tolDev > 0 ? positiveColor : negativeColor).getHexValue());
 	    g.context.setTextAlign("center");

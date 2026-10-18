@@ -40,6 +40,7 @@ class TransistorElm extends CircuitElm {
 	    super(xx, yy);
 	    pnp = (pnpflag) ? -1 : 1;
 	    beta = 100;
+	    tolerance = .5;   // hFE spread is wide: e.g. a BC847B is 200-450
 	    modelName = lastModelName;
 	    setup();
 	}
@@ -67,6 +68,19 @@ class TransistorElm extends CircuitElm {
 	    noDiagonal = true;
 	}
 	boolean nonLinear() { return true; }
+
+	// tolerance applies to beta (hFE)
+	boolean supportsTolerance() { return true; }
+	String toleranceName() { return "hFE"; }
+	String toleranceEditLabel() { return "hFE tolerance (%) (0 = none)"; }
+	double getEffBeta() { return beta*tolFactor(); }
+
+	// below the part, clear of the gate/base lead and its label
+	Point toleranceSwitchCenter() {
+	    if (dy == 0)
+		return new Point((x + x2)/2, y + 34);
+	    return super.toleranceSwitchCenter();
+	}
 	void reset() {
 	    volts[0] = volts[1] = volts[2] = 0;
 	    lastvbc = lastvbe = curcount_c = curcount_e = curcount_b = 0;
@@ -205,6 +219,7 @@ class TransistorElm extends CircuitElm {
 	    sim.stampNonLinear(nodes[2]);
 	}
 	void doStep() {
+	    double effBeta = getEffBeta();
 	    double vbc = pnp*(volts[0]-volts[1]); // typically negative
 	    double vbe = pnp*(volts[0]-volts[2]); // typically positive
 	    if (Math.abs(vbc-lastvbc) > .01 || // .01
@@ -310,7 +325,7 @@ class TransistorElm extends CircuitElm {
              *   determine dc incremental conductances
              */
             cc=cc+(cex-cbc)/qb-cbc/model.betaR-cbcn;
-            double cb=cbe/beta+cben+cbc/model.betaR+cbcn;
+            double cb=cbe/effBeta+cben+cbc/model.betaR+cbcn;
             
             // get currents
 	    ic = pnp*cc;
@@ -325,7 +340,7 @@ class TransistorElm extends CircuitElm {
                 gx=rbpr+3*rbpi*(arg1-arg2)/arg2/arg1/arg1;
             }
             if(gx != 0) gx=1/gx;*/
-            double gpi=gbe/beta+gben;
+            double gpi=gbe/effBeta+gben;
             double gmu=gbc/model.betaR+gbcn;
             double go=(gbc+(cex-cbc)*dqbdvc/qb)/qb;
             double gm=(gex-(cex-cbc)*dqbdve/qb)/qb-go;
@@ -369,7 +384,7 @@ class TransistorElm extends CircuitElm {
 	}
 	
 	void getInfo(String arr[]) {
-	    arr[0] = sim.LS("transistor") + " (" + ((pnp == -1) ? "PNP)" : "NPN)") + " \u03b2=" + showFormat.format(beta);
+	    arr[0] = sim.LS("transistor") + " (" + ((pnp == -1) ? "PNP)" : "NPN)") + " \u03b2=" + showFormat.format(getEffBeta());
 	    double vbc = volts[0]-volts[1];
 	    double vbe = volts[0]-volts[2];
 	    double vce = volts[1]-volts[2];

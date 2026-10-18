@@ -50,6 +50,20 @@ package com.lushprojects.circuitjs1.client;
 	    setupDiodes();
 	    beta = getDefaultBeta();
 	    vt = getDefaultThreshold();
+	    tolerance = .3;   // Vgs(th) spread, e.g. a 2N7002 is 1-2.5 V
+	}
+
+	// tolerance applies to the threshold voltage
+	boolean supportsTolerance() { return true; }
+	String toleranceName() { return "Vt"; }
+	String toleranceEditLabel() { return "Threshold voltage tolerance (%) (0 = none)"; }
+	double getEffVt() { return vt*tolFactor(); }
+
+	// below the part, clear of the gate/base lead and its label
+	Point toleranceSwitchCenter() {
+	    if (dy == 0)
+		return new Point((x + x2)/2, y + 34);
+	    return super.toleranceSwitchCenter();
 	}
 	
 	public MosfetElm(int xa, int ya, int xb, int yb, int f,
@@ -338,6 +352,7 @@ package com.lushprojects.circuitjs1.client;
 	
 	// this is called in doStep to stamp the matrix, and also called in stepFinished() to calculate the current
 	void calculate(boolean finished) {
+	    double vt = getEffVt();
 	    double vs[];
 	    if (finished)
 		vs = volts;
@@ -436,7 +451,7 @@ package com.lushprojects.circuitjs1.client;
 	@SuppressWarnings("static-access")
 	void getFetInfo(String arr[], String n) {
 	    arr[0] = sim.LS(((pnp == -1) ? "p-" : "n-") + n);
-	    arr[0] += " (Vt=" + getVoltageText(pnp*vt);
+	    arr[0] += " (Vt=" + getVoltageText(pnp*getEffVt());
 	    arr[0] += ", \u03b2=" + beta + ")";
 	    arr[1] = ((pnp == 1) ? "Ids = " : "Isd = ") + getCurrentText(ids);
 	    arr[2] = "Vgs = " + getVoltageText(volts[0]-volts[pnp == -1 ? 2 : 1]);
