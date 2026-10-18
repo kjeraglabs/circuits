@@ -128,7 +128,8 @@ class Toolbar extends FlowPanel {
 	addPart("Generic load", new String[] { "GenericLoadElm" }, new String[] { loadIcon });
 	addPart("I/O pins", new String[] { "DigitalInputElm", "AnalogInputElm", "DigitalOutputElm", "AnalogOutputElm" },
 		new String[] { dinIcon, ainIcon, doutIcon, aoutIcon });
-	addPart("Meters", new String[] { "ProbeElm", "AmmeterElm" }, new String[] { voltmeterIcon, ammeterIcon });
+	addPart("Voltmeter", new String[] { "ProbeElm" }, new String[] { voltmeterIcon });
+	addPart("Ammeter", new String[] { "AmmeterElm" }, new String[] { ammeterIcon });
 	addPart("Net label", new String[] { "LabeledNodeElm" }, new String[] { labelIcon });
     }
 
