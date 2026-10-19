@@ -3597,13 +3597,23 @@ MouseOutHandler, MouseWheelHandler {
     }
     
     void doSliders(CircuitElm ce) {
+	// with several parts of the same kind selected, the sliders apply to all of them
+	Vector<CircuitElm> group = new Vector<CircuitElm>();
+	group.add(ce);
+	if (ce != null && ce.isSelected()) {
+	    for (int i = 0; i != elmList.size(); i++) {
+		CircuitElm e = getElm(i);
+		if (e != ce && e.isSelected() && e.getClass() == ce.getClass())
+		    group.add(e);
+	    }
+	}
 	clearSelection();
 	pushUndo();
 	if (sliderDialog != null) {
 	    sliderDialog.setVisible(false);
 	    sliderDialog = null;
 	}
-	sliderDialog = new SliderDialog(ce, this);
+	sliderDialog = new SliderDialog(ce, group, this);
 	sliderDialog.show();
     }
 
@@ -4058,12 +4068,33 @@ MouseOutHandler, MouseWheelHandler {
 	int i;
 	if (adjustables == null)
 	    return;
-	for (i = adjustables.size()-1; i >= 0; i--) {
-	    Adjustable adj = adjustables.get(i);
-	    if (adj.elm == elm) {
-		adj.deleteSlider(this);
-		adjustables.remove(i);
-	    }
+	Vector<Adjustable> gone = new Vector<Adjustable>();
+	for (i = 0; i != adjustables.size(); i++)
+	    if (adjustables.get(i).elm == elm)
+		gone.add(adjustables.get(i));
+	for (Adjustable adj : gone)
+	    removeAdjustable(adj);
+    }
+
+    // remove a slider. If other parts follow it, the first of them takes it over.
+    void removeAdjustable(Adjustable adj) {
+	adj.deleteSlider(this);
+	adjustables.remove(adj);
+	if (adj.sharedSlider != null)
+	    return;
+	Adjustable heir = null;
+	for (Adjustable a : adjustables) {
+	    if (a.sharedSlider != adj)
+		continue;
+	    if (heir == null) {
+		heir = a;
+		a.sharedSlider = null;
+		a.minValue = adj.minValue;
+		a.maxValue = adj.maxValue;
+		a.sliderText = adj.sliderText;
+		a.createSlider(this, a.elm.getEditInfo(a.editItem).value);
+	    } else
+		a.sharedSlider = heir;
 	}
     }
     

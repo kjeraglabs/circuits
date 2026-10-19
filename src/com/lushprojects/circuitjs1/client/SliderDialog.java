@@ -40,6 +40,8 @@ import com.google.gwt.user.client.ui.HasHorizontalAlignment;
 // class EditDialog extends Dialog implements AdjustmentListener, ActionListener, ItemListener {
 class SliderDialog extends DialogBox  {
 	CircuitElm elm;
+	// parts the dialog applies to: elm plus any other selected parts of the same kind
+	java.util.Vector<CircuitElm> group;
 	CirSim sim;
 	Button applyButton, okButton, cancelButton;
 	EditInfo einfos[];
@@ -49,11 +51,12 @@ class SliderDialog extends DialogBox  {
 	HorizontalPanel hp;
 	NumberFormat noCommaFormat;
 
-	SliderDialog(CircuitElm ce, CirSim f) {
+	SliderDialog(CircuitElm ce, java.util.Vector<CircuitElm> g, CirSim f) {
 		super(); // Do we need this?
-		setText(CirSim.LS("Add Sliders"));
+		setText(CirSim.LS("Add Sliders") + (g.size() > 1 ? " (" + g.size() + " parts)" : ""));
 		sim = f;
 		elm = ce;
+		group = g;
 		vp=new VerticalPanel();
 		setWidget(vp);
 		einfos = new EditInfo[10];
@@ -111,7 +114,30 @@ class SliderDialog extends DialogBox  {
                             }
                         });
 
-			if (adj != null) {
+			if (adj != null && adj.sharedSlider != null) {
+			    vp.insert(new Label(CirSim.LS("Follows slider") + " \"" + adj.sharedSlider.sliderText + "\""), idx++);
+			} else if (adj == null) {
+			    // offer the sliders already made for this value on other parts of the same kind
+			    final java.util.Vector<Adjustable> masters = new java.util.Vector<Adjustable>();
+			    for (Adjustable a : sim.adjustables)
+				if (a.sharedSlider == null && a.editItem == i && a.elm.getClass() == elm.getClass() && !group.contains(a.elm))
+				    masters.add(a);
+			    if (masters.size() > 0) {
+				final Choice c = new Choice();
+				c.addItem(CirSim.LS("Use existing slider..."));
+				for (Adjustable a : masters)
+				    c.addItem(a.sliderText);
+				final int item = i;
+				c.addChangeHandler(new ChangeHandler() {
+				    public void onChange(ChangeEvent e) {
+					int n = c.getSelectedIndex();
+					if (n > 0)
+					    follow(item, masters.get(n-1));
+				    }
+				});
+				vp.insert(c, idx++);
+			    }
+			} else {
 			    vp.insert(new Label("Min Value"), idx++);
 			    ei.minBox = new TextBox();
 			    vp.insert(ei.minBox, idx++);
@@ -138,9 +164,11 @@ class SliderDialog extends DialogBox  {
 		int i;
 		for (i = 0; i != einfocount; i++) {
 		    Adjustable adj = findAdjustable(i);
-		    if (adj == null)
+		    if (adj == null || adj.sharedSlider != null)
 			continue;
 		    EditInfo ei = einfos[i];
+		    if (ei.labelBox == null)
+			continue;
 //		    if (ei.labelBox == null)  // haven't created UI yet?
 //			continue;
 		    try {
@@ -168,10 +196,16 @@ class SliderDialog extends DialogBox  {
 			adj.sliderText = ei.name.replaceAll(" \\(.*\\)$", "");
 			adj.createSlider(sim, ei.value);
 			sim.adjustables.add(adj);
+			// the other selected parts follow the new slider
+			for (CircuitElm g : group)
+			    if (g != elm)
+				addFollower(g, i, adj, ei.value);
 		    } else {
-			Adjustable adj = findAdjustable(i);
-			adj.deleteSlider(sim);
-			sim.adjustables.remove(adj);
+			for (CircuitElm g : group) {
+			    Adjustable adj = sim.findAdjustable(g, i);
+			    if (adj != null)
+				sim.removeAdjustable(adj);
+			}
 		    }
 		    changed = true;
 		}
@@ -185,6 +219,25 @@ class SliderDialog extends DialogBox  {
 	    }
 	}
 	
+	// make every part in the group follow an existing slider
+	void follow(int item, Adjustable master) {
+		double v = master.getSliderValue();
+		for (CircuitElm g : group)
+		    addFollower(g, item, master, v);
+		sim.needAnalyze();
+		clearDialog();
+		buildDialog();
+	}
+
+	void addFollower(CircuitElm g, int item, Adjustable master, double value) {
+		Adjustable old = sim.findAdjustable(g, item);
+		if (old != null)
+		    sim.removeAdjustable(old);
+		sim.adjustables.add(new Adjustable(g, item, master));
+		Adjustable.setValue(g, item, value);
+		sim.needAnalyze();
+	}
+
 	public void clearDialog() {
 		while (vp.getWidget(0)!=hp)
 			vp.remove(0);

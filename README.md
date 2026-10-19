@@ -37,6 +37,13 @@ can be given a max power, max voltage and max current in their edit dialog
 
 All four support component ratings.
 
+**Shared sliders.** In a part's Sliders dialog, "Use existing slider..." lists the sliders already
+made for that value on parts of the same kind; pick one and this part follows it. With several
+parts of the same kind selected, right-click one of them and open Sliders to give them all one
+slider (or one shared existing slider). Unticking removes the slider from the selected parts;
+if other parts still follow it, the first of them takes it over. A following part is saved as
+`38 elm item min max label sliderElm sliderItem`.
+
 **Tolerance testing** (Edit > Tolerance Testing, or the toolbar button with the resistor and ±)
 
 Resistors, capacitors and inductors have a Tolerance (%) setting (0 = none). New resistors
