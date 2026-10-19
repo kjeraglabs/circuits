@@ -106,37 +106,37 @@ class SliderDialog extends DialogBox  {
 
 			// remove HTML
 			name = name.replaceAll("<[^>]*>", "");
-			ei.checkbox = new Checkbox(name, adj != null);
-			vp.insert(ei.checkbox, idx++);
-                        ei.checkbox.addValueChangeHandler( new ValueChangeHandler<Boolean>() {
-                            public void onValueChange(ValueChangeEvent<Boolean> e){
-                                    itemStateChanged(e);
-                            }
-                        });
+			vp.insert(new Label(name), idx++);
 
-			if (adj != null && adj.sharedSlider != null) {
-			    vp.insert(new Label(CirSim.LS("Follows slider") + " \"" + adj.sharedSlider.sliderText + "\""), idx++);
-			} else if (adj == null) {
-			    // offer the sliders already made for this value on other parts of the same kind
-			    final java.util.Vector<Adjustable> masters = new java.util.Vector<Adjustable>();
-			    for (Adjustable a : sim.adjustables)
-				if (a.sharedSlider == null && a.editItem == i && a.elm.getClass() == elm.getClass() && !group.contains(a.elm))
-				    masters.add(a);
-			    if (masters.size() > 0) {
-				final Choice c = new Choice();
-				c.addItem(CirSim.LS("Use existing slider..."));
-				for (Adjustable a : masters)
-				    c.addItem(a.sliderText);
-				final int item = i;
-				c.addChangeHandler(new ChangeHandler() {
-				    public void onChange(ChangeEvent e) {
-					int n = c.getSelectedIndex();
-					if (n > 0)
-					    follow(item, masters.get(n-1));
-				    }
-				});
-				vp.insert(c, idx++);
+			// one dropdown: no slider, a new slider, or share a slider another part of the same kind already has
+			final java.util.Vector<Adjustable> masters = new java.util.Vector<Adjustable>();
+			for (Adjustable a : sim.adjustables)
+			    if (a.sharedSlider == null && a.editItem == i && a.elm.getClass() == elm.getClass() &&
+				    a.elm != elm && !(group.contains(a.elm) && group.size() > 1))
+				masters.add(a);
+			final Choice c = new Choice();
+			c.addItem(CirSim.LS("No slider"));
+			c.addItem(CirSim.LS(adj != null && adj.sharedSlider == null ? "Own slider" : "New slider"));
+			int sel = (adj == null) ? 0 : 1;
+			int k;
+			for (k = 0; k != masters.size(); k++) {
+			    Adjustable m = masters.get(k);
+			    c.addItem(CirSim.LS("Share slider") + " \"" + m.sliderText + "\"");
+			    if (adj != null && adj.sharedSlider == m)
+				sel = k + 2;
+			}
+			c.setSelectedIndex(sel);
+			final int item = i;
+			c.addChangeHandler(new ChangeHandler() {
+			    public void onChange(ChangeEvent e) {
+				int n = c.getSelectedIndex();
+				choose(item, n < 2 ? null : masters.get(n-2), n);
 			    }
+			});
+			vp.insert(c, idx++);
+
+			if (adj == null || adj.sharedSlider != null) {
+			    // nothing more to set
 			} else {
 			    vp.insert(new Label("Min Value"), idx++);
 			    ei.minBox = new TextBox();
@@ -183,42 +183,38 @@ class SliderDialog extends DialogBox  {
 		}
 	}
 
-	public void itemStateChanged(GwtEvent e) {
-	    Object src = e.getSource();
-	    int i;
-	    boolean changed = false;
-	    for (i = 0; i != einfocount; i++) {
-		EditInfo ei = einfos[i];
-		if (ei.checkbox == src) {
-		    apply();
-		    if (ei.checkbox.getState()) {
-			Adjustable adj = new Adjustable(elm, i);
-			adj.sliderText = ei.name.replaceAll(" \\(.*\\)$", "");
-			adj.createSlider(sim, ei.value);
-			sim.adjustables.add(adj);
-			// the other selected parts follow the new slider
-			for (CircuitElm g : group)
-			    if (g != elm)
-				addFollower(g, i, adj, ei.value);
-		    } else {
-			for (CircuitElm g : group) {
-			    Adjustable adj = sim.findAdjustable(g, i);
-			    if (adj != null)
-				sim.removeAdjustable(adj);
-			}
-		    }
-		    changed = true;
+	// n: 0 = no slider, 1 = own slider, 2+ = share master
+	void choose(int i, Adjustable master, int n) {
+	    apply();
+	    EditInfo ei = einfos[i];
+	    if (n == 0) {
+		for (CircuitElm g : group) {
+		    Adjustable adj = sim.findAdjustable(g, i);
+		    if (adj != null)
+			sim.removeAdjustable(adj);
 		}
+	    } else if (n == 1) {
+		Adjustable adj = findAdjustable(i);
+		if (adj == null || adj.sharedSlider != null) {
+		    if (adj != null)
+			sim.removeAdjustable(adj);
+		    adj = new Adjustable(elm, i);
+		    adj.sliderText = ei.name.replaceAll("<[^>]*>", "").replaceAll(" \\(.*\\)$", "");
+		    adj.createSlider(sim, ei.value);
+		    sim.adjustables.add(adj);
+		}
+		// the other selected parts follow it
+		for (CircuitElm g : group)
+		    if (g != elm)
+			addFollower(g, i, adj, ei.value);
+	    } else {
+		follow(i, master);
+		return;
 	    }
-	    if (changed) {
-		// apply changes before we reset everything
-		apply();
-		
-		clearDialog();
-		buildDialog();
-	    }
+	    clearDialog();
+	    buildDialog();
 	}
-	
+
 	// make every part in the group follow an existing slider
 	void follow(int item, Adjustable master) {
 		double v = master.getSliderValue();

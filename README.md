@@ -44,11 +44,11 @@ All four support component ratings.
 (BJT: C, B and E together; MOSFET: drain to source); a burned op amp output goes high-impedance
 or shorts to ground.
 
-**Shared sliders.** In a part's Sliders dialog, "Use existing slider..." lists the sliders already
-made for that value on parts of the same kind; pick one and this part follows it. With several
-parts of the same kind selected, right-click one of them and open Sliders to give them all one
-slider (or one shared existing slider). Unticking removes the slider from the selected parts;
-if other parts still follow it, the first of them takes it over. A following part is saved as
+**Shared sliders.** The Sliders dialog has one dropdown per value: No slider, New/Own slider, or
+Share slider "name" for each slider already made for that value on a part of the same kind
+(also when the part already has its own slider). With several parts of the same kind selected,
+right-click one of them and open Sliders to set all of them at once. Removing a slider that
+other parts follow hands it over to the first of them. A following part is saved as
 `38 elm item min max label sliderElm sliderItem`.
 
 **Tolerance testing** (Edit > Tolerance Testing, or the toolbar button with the resistor and ±)
