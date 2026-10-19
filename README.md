@@ -44,6 +44,10 @@ All four support component ratings.
 (BJT: C, B and E together; MOSFET: drain to source); a burned op amp output goes high-impedance
 or shorts to ground.
 
+**Version number.** Shown in the top right corner, from the `VERSION` file (dev builds add `-dev`).
+Bump the last number for a bug fix (1.12.0 -> 1.12.1) and the middle one for a new feature
+(1.12.1 -> 1.13.0), in the same commit as the change.
+
 **Shared sliders.** The Sliders dialog has one dropdown per value: No slider, New/Own slider, or
 Share slider "name" for each slider already made for that value on a part of the same kind
 (also when the part already has its own slider). With several parts of the same kind selected,

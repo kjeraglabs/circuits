@@ -29,6 +29,11 @@ if [ "${STAGING:-}" = "1" ]; then
   sed -i -e 's|<body>|<body><div style="background:#ffd000;color:#000;padding:4px 6px;margin:-6px -4px 8px;font-weight:bold">DEV BUILD: testing only. <a href="/" target="_top">Go to live site</a></div>|' dist/iframe.html
 fi
 
+# version number shown in the top right corner (see VERSION)
+VERSION="$(tr -d ' \r\n' < VERSION)"
+if [ "${STAGING:-}" = "1" ]; then VERSION="$VERSION-dev"; fi
+sed -i -e "s|@VERSION@|$VERSION|" dist/circuitjs.html
+
 # serve the simulator at the site root
 cp dist/circuitjs.html dist/index.html
 # GitHub Pages serves 404.html for unknown paths, so /led-demo opens the app,
