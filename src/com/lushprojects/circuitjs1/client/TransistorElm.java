@@ -113,6 +113,34 @@ class TransistorElm extends CircuitElm {
 	    return s;
 	}
 
+	void drawMetrics(Graphics g) {
+	    double vcb = volts[1]-volts[0], vce = volts[1]-volts[2], vbe = volts[0]-volts[2];
+	    String region;
+	    if (failed)
+		region = "BURNED (" + failReason + ")";
+	    else {
+		double bc = pnp*(volts[0]-volts[1]), be = pnp*vbe;
+		region = (bc > .2) ? (be > .2 ? "saturated" : "reverse active") : (be > .2 ? "active" : "cutoff");
+	    }
+	    if (vceSat > 0)
+		region += ", Vce(sat) " + getShortUnitText(vceSat, "V");
+	    String lines[] = {
+		"Vcb = " + getShortUnitText(vcb, "V"),
+		"Vce = " + getShortUnitText(vce, "V"),
+		"Vbe = " + getShortUnitText(vbe, "V"),
+		"Ic = " + getShortUnitText(ic, "A"),
+		"P = " + getShortUnitText(getPower(), "W"),
+		region };
+	    int st[] = {
+		metStatus(Math.max(0, reverseVcb()), ratedVcb),
+		metStatus(vce, ratedVoltage),
+		metStatus(Math.max(0, reverseVeb()), ratedVeb),
+		metStatus(ic, ratedCurrent),
+		metStatus(filtPower, ratedPower),
+		failed ? MET_BAD : MET_NONE };
+	    drawMetricLines(g, lines, st);
+	}
+
 	// rating fields: power, Vce, Ic, then Vcb and Veb, then the common ones
 	EditInfo getRatingEditInfo(int n) {
 	    if (n == 3)

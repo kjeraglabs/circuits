@@ -376,6 +376,20 @@ MouseOutHandler, MouseWheelHandler {
     static final int BREAKING_DUMP_TYPE = 909;
     int readBreaking;   // -1 = not in file, else 0/1
 
+    // ---- transistor metrics on/off (a browser preference) ----
+    boolean metricsEnabled;
+    CheckboxMenuItem metricsCheckItem;
+
+    void setMetrics(boolean on) {
+	metricsEnabled = on;
+	setOptionInStorage("metrics", on);
+	if (metricsCheckItem != null)
+	    metricsCheckItem.setState(on);
+	if (toolbar != null)
+	    toolbar.setMetricsActive(on);
+	repaint();
+    }
+
     void setBreaking(boolean on) {
 	breakingEnabled = on;
 	setOptionInStorage("breaking", on);
@@ -719,6 +733,14 @@ MouseOutHandler, MouseWheelHandler {
 	}));
 	breakingEnabled = getOptionFromStorage("breaking", true);
 	breakingCheckItem.setState(breakingEnabled);
+
+	m.addItem(metricsCheckItem = new CheckboxMenuItem(LS("Transistor Metrics"),
+		new Command() { public void execute(){
+		    setMetrics(metricsCheckItem.getState());
+		}
+	}));
+	metricsEnabled = getOptionFromStorage("metrics", false);
+	metricsCheckItem.setState(metricsEnabled);
 
 	m.addItem(toolbarCheckItem = new CheckboxMenuItem(LS("Toolbar"),
 		new Command() { public void execute(){
@@ -1621,6 +1643,8 @@ MouseOutHandler, MouseWheelHandler {
 	for (i = 0; i != elmList.size(); i++) {
 	    getElm(i).drawRatingOverlay(g);
 	    getElm(i).drawToleranceSwitch(g);
+	    if (metricsEnabled)
+		getElm(i).drawMetrics(g);
 	}
 	mydrawtime+=System.currentTimeMillis()-mydrawstarttime;
 	
@@ -3275,6 +3299,8 @@ MouseOutHandler, MouseWheelHandler {
     	}
     	if (item=="tolerance")
     	    setToleranceMode(!toleranceMode);
+    	if (item=="metrics")
+    	    setMetrics(!metricsEnabled);
     	if (item=="breaking")
     	    setBreaking(!breakingEnabled);
     	if (item=="rotate")

@@ -50,6 +50,12 @@ or shorts to ground.
 Bump the last number for a bug fix (1.12.0 -> 1.12.1) and the middle one for a new feature
 (1.12.1 -> 1.13.0), in the same commit as the change.
 
+**Transistor metrics** (Options > Transistor Metrics, or the toolbar button next to Component
+Ratings). Every BJT shows Vcb, Vce, Vbe, Ic, power and its region (cutoff/active/saturated) beside
+the symbol, every MOSFET/JFET Vgs, Vds, Id, power and region. With component ratings on, each rated
+value gets a mark: green check under 80% of its rating, amber ! from 80%, red X over. A browser
+preference, not saved in the circuit.
+
 **Shared sliders.** The Sliders dialog has one dropdown per value: No slider, New/Own slider, or
 Share slider "name" for each slider already made for that value on a part of the same kind
 (also when the part already has its own slider). With several parts of the same kind selected,

@@ -266,6 +266,67 @@ public abstract class CircuitElm implements Editable {
     double extraRatingStress() { return 0; }
     String extraRatingName;
 
+    // ---------------------------------------------------------------
+    // Transistor metrics (Kjerag Labs addition): with the metrics toggle on,
+    // transistors list their voltages/currents beside the symbol, each
+    // marked against its rating: check under 80%, ! from 80%, X over.
+    // ---------------------------------------------------------------
+    static final int MET_NONE = 0, MET_OK = 1, MET_WARN = 2, MET_BAD = 3;
+
+    // status of v against rating r (no mark if not rated or ratings are off)
+    int metStatus(double v, double r) {
+	if (r <= 0 || !sim.breakingEnabled)
+	    return MET_NONE;
+	double s = Math.abs(v)/r;
+	return s > 1 ? MET_BAD : s >= RATING_WARN ? MET_WARN : MET_OK;
+    }
+
+    void drawMetrics(Graphics g) {}
+
+    // draw lines of text beyond point2 (away from point1), each with an optional mark
+    void drawMetricLines(Graphics g, String lines[], int st[]) {
+	if (point2 == null)
+	    return;
+	final int lh = 13;
+	String marks[] = { "", "\u2713", "!", "\u2717" };
+	String colors[] = { "", sim.isLightBackground() ? "#1f9a3a" : "#4cd06a", "#d99a00",
+	    sim.isLightBackground() ? "#c0171c" : "#ff4040" };
+	g.context.save();
+	g.context.setFont("11px sans-serif");
+	g.context.setTextBaseline("middle");
+	int n = lines.length, i;
+	double w = 0;
+	for (i = 0; i != n; i++)
+	    w = Math.max(w, g.context.measureText(lines[i]).getWidth() + (st[i] != MET_NONE ? 12 : 0));
+	double h = n*lh;
+	double x0, y0;
+	if (Math.abs(dx) >= Math.abs(dy)) {
+	    // beside the part, past the collector/emitter (drain/source) leads
+	    x0 = (dx >= 0) ? point2.x + 14 : point2.x - 14 - w;
+	    y0 = point2.y - h/2;
+	} else {
+	    x0 = point2.x - w/2;
+	    y0 = (dy >= 0) ? point2.y + 14 : point2.y - 14 - h;
+	}
+	// soft backing so the text reads over wires
+	g.context.setGlobalAlpha(.85);
+	g.context.setFillStyle(sim.getBackgroundColor().getHexValue());
+	g.context.fillRect(x0 - 3, y0 - 2, w + 6, h + 4);
+	g.context.setGlobalAlpha(1);
+	for (i = 0; i != n; i++) {
+	    double y = y0 + lh*i + lh/2.;
+	    g.context.setFillStyle(whiteColor.getHexValue());
+	    g.context.fillText(lines[i], x0, y);
+	    if (st[i] != MET_NONE) {
+		g.context.setFillStyle(colors[st[i]]);
+		g.context.setFont("bold 11px sans-serif");
+		g.context.fillText(marks[st[i]], x0 + g.context.measureText(lines[i]).getWidth() + 4, y);
+		g.context.setFont("11px sans-serif");
+	    }
+	}
+	g.context.restore();
+    }
+
     // current through a failed element (replaced by getFailResistance())
     void calculateFailedCurrent() {
 	current = (volts[0]-(getPostCount() > 1 ? volts[1] : 0))/getFailResistance();

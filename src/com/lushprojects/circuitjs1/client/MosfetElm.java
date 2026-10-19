@@ -72,6 +72,26 @@ package com.lushprojects.circuitjs1.client;
 	String ratingVoltageLabel() { return "Max Vds (V)"; }
 	String ratingCurrentLabel() { return "Max drain current (A)"; }
 
+	void drawMetrics(Graphics g) {
+	    double vgs = volts[0]-volts[1], vds = volts[2]-volts[1];
+	    String region = failed ? "BURNED (" + failReason + ")" :
+		(mode == 0) ? "off" : (mode == 1) ? "linear" : "saturation";
+	    region += ", Vth " + getShortUnitText(pnp*getEffVt(), "V");
+	    String lines[] = {
+		"Vgs = " + getShortUnitText(vgs, "V"),
+		"Vds = " + getShortUnitText(vds, "V"),
+		"Id = " + getShortUnitText(ids, "A"),
+		"P = " + getShortUnitText(getPower(), "W"),
+		region };
+	    int st[] = {
+		MET_NONE,
+		metStatus(vds, ratedVoltage),
+		metStatus(ids, ratedCurrent),
+		metStatus(filtPower, ratedPower),
+		failed ? MET_BAD : MET_NONE };
+	    drawMetricLines(g, lines, st);
+	}
+
 	// burned: open leaves all pins open, short shorts drain to source
 	void stampFailed() {
 	    sim.stampResistor(nodes[1], nodes[2], failMode == FAIL_SHORT ? FAIL_SHORT_R : FAIL_OPEN_R);
