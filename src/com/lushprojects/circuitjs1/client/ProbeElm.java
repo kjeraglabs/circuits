@@ -312,7 +312,7 @@ return null;
     public void setEditValue(int n, EditInfo ei) {
 	if (n == 0) {
 	    if (ei.checkbox.getState())
-		flags = FLAG_SHOWVOLTAGE;
+		flags |= FLAG_SHOWVOLTAGE;
 	    else
 		flags &= ~FLAG_SHOWVOLTAGE;
 	}
