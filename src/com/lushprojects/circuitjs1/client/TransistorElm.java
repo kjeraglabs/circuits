@@ -41,6 +41,10 @@ class TransistorElm extends CircuitElm {
 	    pnp = (pnpflag) ? -1 : 1;
 	    beta = 100;
 	    tolerance = .5;   // hFE spread is wide: e.g. a BC847B is 200-450
+	    // small-signal SOT-23 transistor, e.g. BC847
+	    ratedPower = .25;
+	    ratedVoltage = 45;
+	    ratedCurrent = .1;
 	    modelName = lastModelName;
 	    setup();
 	}
@@ -74,6 +78,31 @@ class TransistorElm extends CircuitElm {
 	String toleranceName() { return "hFE"; }
 	String toleranceEditLabel() { return "hFE tolerance (%) (0 = none)"; }
 	double getEffBeta() { return beta*tolFactor(); }
+
+	// ratings: Ptot, Vce and Ic
+	boolean supportsRatings() { return true; }
+	double ratingVoltage() { return volts[1]-volts[2]; }
+	double ratingCurrent() { return ic; }
+	String ratingVoltageName() { return "Vce"; }
+	String ratingCurrentName() { return "Ic"; }
+	String ratingVoltageLabel() { return "Max Vce (V)"; }
+	String ratingCurrentLabel() { return "Max collector current (A)"; }
+
+	// burned: open leaves all pins open, short ties collector, emitter and base together
+	void stampFailed() {
+	    boolean sh = (failMode == FAIL_SHORT);
+	    sim.stampResistor(nodes[1], nodes[2], sh ? FAIL_SHORT_R : FAIL_OPEN_R);
+	    sim.stampResistor(nodes[0], nodes[2], sh ? FAIL_SHORT_R : FAIL_OPEN_R);
+	    sim.stampResistor(nodes[0], nodes[1], FAIL_OPEN_R);
+	}
+
+	void calculateFailedCurrent() {
+	    boolean sh = (failMode == FAIL_SHORT);
+	    double r = sh ? FAIL_SHORT_R : FAIL_OPEN_R;
+	    ic = (volts[1]-volts[2])/r + (volts[1]-volts[0])/FAIL_OPEN_R;
+	    ib = (volts[0]-volts[2])/r + (volts[0]-volts[1])/FAIL_OPEN_R;
+	    ie = -ic-ib;
+	}
 
 	// below the part, clear of the gate/base lead and its label
 	Point toleranceSwitchCenter() {

@@ -3008,7 +3008,8 @@ MouseOutHandler, MouseWheelHandler {
 	    }
 	    boolean somethingBurned = false;
 	    for (i = 0; i != elmList.size(); i++) {
-		getElm(i).stepFinished();
+		if (!getElm(i).failed)
+		    getElm(i).stepFinished();
 		if (getElm(i).ratingStep(timeStep))
 		    somethingBurned = true;
 	    }

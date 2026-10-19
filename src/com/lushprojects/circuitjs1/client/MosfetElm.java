@@ -51,6 +51,10 @@ package com.lushprojects.circuitjs1.client;
 	    beta = getDefaultBeta();
 	    vt = getDefaultThreshold();
 	    tolerance = .3;   // Vgs(th) spread, e.g. a 2N7002 is 1-2.5 V
+	    // small-signal SOT-23 MOSFET, e.g. 2N7002
+	    ratedPower = .35;
+	    ratedVoltage = 60;
+	    ratedCurrent = .2;
 	}
 
 	// tolerance applies to the threshold voltage
@@ -58,6 +62,30 @@ package com.lushprojects.circuitjs1.client;
 	String toleranceName() { return "Vt"; }
 	String toleranceEditLabel() { return "Threshold voltage tolerance (%) (0 = none)"; }
 	double getEffVt() { return vt*tolFactor(); }
+
+	// ratings: Ptot, Vds and Id
+	boolean supportsRatings() { return true; }
+	double ratingVoltage() { return volts[2]-volts[1]; }
+	double ratingCurrent() { return ids; }
+	String ratingVoltageName() { return "Vds"; }
+	String ratingCurrentName() { return "Id"; }
+	String ratingVoltageLabel() { return "Max Vds (V)"; }
+	String ratingCurrentLabel() { return "Max drain current (A)"; }
+
+	// burned: open leaves all pins open, short shorts drain to source
+	void stampFailed() {
+	    sim.stampResistor(nodes[1], nodes[2], failMode == FAIL_SHORT ? FAIL_SHORT_R : FAIL_OPEN_R);
+	    sim.stampResistor(nodes[0], nodes[1], FAIL_OPEN_R);
+	    if (getPostCount() > 3)
+		sim.stampResistor(nodes[3], nodes[1], FAIL_OPEN_R);
+	}
+
+	void calculateFailedCurrent() {
+	    ids = (volts[2]-volts[1])/getFailResistance();
+	    diodeCurrent1 = diodeCurrent2 = 0;
+	    gm = 0;
+	    mode = 0;
+	}
 
 	// below the part, clear of the gate/base lead and its label
 	Point toleranceSwitchCenter() {

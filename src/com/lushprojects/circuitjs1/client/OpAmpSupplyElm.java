@@ -99,6 +99,9 @@ class OpAmpSupplyElm extends OpAmpElm {
 	sim.stampRightSide(nodes[4]);
     }
 
+    double railHigh() { return volts[3]; }
+    double railLow() { return volts[4]; }
+
     void doStep() {
 	maxOut = volts[3] - swingLoss;
 	minOut = volts[4] + swingLoss;

@@ -36,6 +36,7 @@ package com.lushprojects.circuitjs1.client;
            flags = FLAG_GAIN; // need to do this before setSize()
 	    gain = 100000;
 	    tolerance = .005;   // max input offset voltage, general-purpose op amp
+	    ratedVoltage = 40;  // max supply span; output current and power not rated by default
            setSize(sim.smallGridCheckItem.getState() ? 1 : 2);
 	}
 	public OpAmpElm(int xa, int ya, int xb, int yb, int f,
@@ -90,7 +91,11 @@ package com.lushprojects.circuitjs1.client;
 	    drawDots(g, point2, lead2, curcount);
 	    drawPosts(g);
 	}
-	double getPower() { return volts[2]*current; }
+	// output stage dissipation: from V+ to the output when sourcing, output to V- when sinking
+	double getPower() {
+	    double iout = -current;
+	    return iout > 0 ? (railHigh() - volts[2])*iout : (volts[2] - railLow())*(-iout);
+	}
 	Point in1p[], in2p[], textp[];
 	Polygon triangle;
 	Font plusFont;
@@ -142,6 +147,32 @@ package com.lushprojects.circuitjs1.client;
 	}
 
 	double lastvd;
+
+	// ratings: supply span (V+ to V-), output current, output stage power
+	boolean supportsRatings() { return true; }
+	double railHigh() { return maxOut; }
+	double railLow() { return minOut; }
+	double ratingVoltage() { return railHigh() - railLow(); }
+	double ratingCurrent() { return current; }
+	String ratingVoltageName() { return "supply voltage"; }
+	String ratingCurrentName() { return "output current"; }
+	String ratingVoltageLabel() { return "Max supply voltage, V+ to V\u2212 (V)"; }
+	String ratingCurrentLabel() { return "Max output current (A)"; }
+
+	// burned: output goes high-impedance (open) or is shorted to ground (short)
+	void stampFailed() {
+	    int i;
+	    for (i = 0; i != getPostCount(); i++)
+		sim.stampResistor(nodes[i], 0, FAIL_OPEN_R);
+	    if (failMode == FAIL_SHORT)
+		sim.stampResistor(nodes[2], 0, FAIL_SHORT_R);
+	    // the output voltage source carries no current
+	    int vn = sim.nodeList.size()+voltSource;
+	    sim.stampMatrix(vn, vn, 1);
+	}
+
+	void calculateFailedCurrent() {}
+	void setCurrent(int vn, double c) { current = failed ? 0 : c; }
 
 	// tolerance is the max input offset voltage: an extra +-Vos on the + input
 	boolean supportsTolerance() { return true; }

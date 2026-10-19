@@ -37,6 +37,13 @@ can be given a max power, max voltage and max current in their edit dialog
 
 All four support component ratings.
 
+**Ratings on active parts.** BJTs are rated on power, Vce and Ic (new ones default to a BC847:
+0.25 W, 45 V, 100 mA); MOSFETs and JFETs on power, Vds and Id (new ones default to a 2N7002:
+0.35 W, 60 V, 200 mA); op amps on supply span V+ to V-, output current and output-stage power
+(new ones default to 40 V only). A burned transistor either goes open on all pins or shorts
+(BJT: C, B and E together; MOSFET: drain to source); a burned op amp output goes high-impedance
+or shorts to ground.
+
 **Shared sliders.** In a part's Sliders dialog, "Use existing slider..." lists the sliders already
 made for that value on parts of the same kind; pick one and this part follows it. With several
 parts of the same kind selected, right-click one of them and open Sliders to give them all one

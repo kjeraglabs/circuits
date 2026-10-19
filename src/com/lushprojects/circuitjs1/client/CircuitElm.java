@@ -212,7 +212,7 @@ public abstract class CircuitElm implements Editable {
     void setNodeVoltage(int n, double c) {
 	volts[n] = c;
 	if (failed)
-	    current = (volts[0]-(getPostCount() > 1 ? volts[1] : 0))/getFailResistance();
+	    calculateFailedCurrent();
 	else
 	    calculateCurrent();
     }
@@ -252,6 +252,20 @@ public abstract class CircuitElm implements Editable {
 	return failMode == FAIL_SHORT ? FAIL_SHORT_R : FAIL_OPEN_R;
     }
 
+    // what the voltage and current ratings are checked against; parts with
+    // more than two terminals override these (e.g. Vce and Ic for a BJT)
+    double ratingVoltage() { return getVoltageDiff(); }
+    double ratingCurrent() { return getCurrent(); }
+    String ratingVoltageName() { return "voltage"; }
+    String ratingCurrentName() { return "current"; }
+    String ratingVoltageLabel() { return "Max voltage (V)"; }
+    String ratingCurrentLabel() { return "Max current (A)"; }
+
+    // current through a failed element (replaced by getFailResistance())
+    void calculateFailedCurrent() {
+	current = (volts[0]-(getPostCount() > 1 ? volts[1] : 0))/getFailResistance();
+    }
+
     // stamp a failed element in place of its normal stamp
     void stampFailed() {
 	sim.stampResistor(nodes[0], getPostCount() > 1 ? nodes[1] : 0, getFailResistance());
@@ -267,17 +281,17 @@ public abstract class CircuitElm implements Editable {
 	    return false;
 	double a = (ratingTau > 0) ? Math.min(1, dt/ratingTau) : 1;
 	filtPower   += (Math.abs(getPower())   - filtPower)*a;
-	filtCurrent += (Math.abs(getCurrent()) - filtCurrent)*a;
+	filtCurrent += (Math.abs(ratingCurrent()) - filtCurrent)*a;
 	double s = 0;
 	String why = null;
 	if (ratedPower > 0 && filtPower/ratedPower > s) {
 	    s = filtPower/ratedPower; why = "power";
 	}
-	if (ratedVoltage > 0 && Math.abs(getVoltageDiff())/ratedVoltage > s) {
-	    s = Math.abs(getVoltageDiff())/ratedVoltage; why = "voltage";
+	if (ratedVoltage > 0 && Math.abs(ratingVoltage())/ratedVoltage > s) {
+	    s = Math.abs(ratingVoltage())/ratedVoltage; why = ratingVoltageName();
 	}
 	if (ratedCurrent > 0 && filtCurrent/ratedCurrent > s) {
-	    s = filtCurrent/ratedCurrent; why = "current";
+	    s = filtCurrent/ratedCurrent; why = ratingCurrentName();
 	}
 	stress = s;
 	if (s > 1 && sim.breakingEnabled) {
@@ -326,9 +340,9 @@ public abstract class CircuitElm implements Editable {
 	if (n == 0)
 	    return new EditInfo("<b>Ratings</b> (0 = not rated)<br>Max power (W)", ratedPower).disallowSliders();
 	if (n == 1)
-	    return new EditInfo("Max voltage (V)", ratedVoltage).disallowSliders();
+	    return new EditInfo(ratingVoltageLabel(), ratedVoltage).disallowSliders();
 	if (n == 2)
-	    return new EditInfo("Max current (A)", ratedCurrent).disallowSliders();
+	    return new EditInfo(ratingCurrentLabel(), ratedCurrent).disallowSliders();
 	if (n == 3)
 	    return new EditInfo("Thermal time constant (s)", ratingTau).disallowSliders();
 	if (n == 4) {
