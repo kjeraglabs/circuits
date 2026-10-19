@@ -33,6 +33,9 @@ package com.lushprojects.circuitjs1.client;
 	int bodyTerminal;
 	
 	double vt;
+	// Kjerag Labs: Rds(on) at a gate voltage, to set beta from the datasheet
+	// (0 = use beta as entered), and the max |Vgs| rating (0 = not rated)
+	double rdsOn, rdsVgs = 10, ratedVgs;
 	// beta = 1/(RdsON*(Vgs-Vt))
 	double beta;
 	static int globalFlags;
@@ -55,6 +58,7 @@ package com.lushprojects.circuitjs1.client;
 	    ratedPower = .35;
 	    ratedVoltage = 60;
 	    ratedCurrent = .2;
+	    ratedVgs = 20;
 	}
 
 	// tolerance applies to the threshold voltage
@@ -62,6 +66,38 @@ package com.lushprojects.circuitjs1.client;
 	String toleranceName() { return "Vt"; }
 	String toleranceEditLabel() { return "Threshold voltage tolerance (%) (0 = none)"; }
 	double getEffVt() { return vt*tolFactor(); }
+
+	// beta from Rds(on) at |Vgs|: in the linear region Rds = 1/(beta (Vgs - Vt))
+	boolean betaFromRdsOn() {
+	    if (rdsOn <= 0 || rdsVgs <= Math.abs(vt))
+		return false;
+	    double b = 1/(rdsOn*(rdsVgs - Math.abs(vt)));
+	    // keep 4 significant digits so the Beta field stays readable
+	    double scale = Math.pow(10, 3 - Math.floor(Math.log10(b)));
+	    beta = lastBeta = Math.round(b*scale)/scale;
+	    return true;
+	}
+
+	boolean hasRatings() { return super.hasRatings() || ratedVgs > 0; }
+
+	double extraRatingStress() {
+	    if (ratedVgs <= 0)
+		return 0;
+	    extraRatingName = "Vgs";
+	    return Math.abs(volts[0]-volts[1])/ratedVgs;
+	}
+
+	// rating fields: power, Vds, Id, then |Vgs|, then the common ones
+	EditInfo getRatingEditInfo(int n) {
+	    if (n == 3)
+		return new EditInfo("Max |Vgs| (V)", ratedVgs).disallowSliders();
+	    return super.getRatingEditInfo(n < 3 ? n : n-1);
+	}
+
+	void setRatingEditValue(int n, EditInfo ei) {
+	    if (n == 3 && ei.value >= 0) { ratedVgs = ei.value; resetRating(); return; }
+	    super.setRatingEditValue(n < 3 ? n : n-1, ei);
+	}
 
 	// ratings: Ptot, Vds and Id
 	boolean supportsRatings() { return true; }
@@ -84,7 +120,7 @@ package com.lushprojects.circuitjs1.client;
 		"P = " + getShortUnitText(getPower(), "W"),
 		region };
 	    int st[] = {
-		MET_NONE,
+		metStatus(vgs, ratedVgs),
 		metStatus(vds, ratedVoltage),
 		metStatus(ids, ratedCurrent),
 		metStatus(filtPower, ratedPower),
@@ -126,6 +162,11 @@ package com.lushprojects.circuitjs1.client;
 		vt = new Double(st.nextToken()).doubleValue();
 		beta = new Double(st.nextToken()).doubleValue();
 	    } catch (Exception e) {}
+	    try {
+		rdsOn = new Double(st.nextToken()).doubleValue();
+		rdsVgs = new Double(st.nextToken()).doubleValue();
+		ratedVgs = new Double(st.nextToken()).doubleValue();
+	    } catch (Exception e) {}
 	    globalFlags = flags & (FLAGS_GLOBAL);
 	    allocNodes(); // make sure volts[] has the right number of elements when hasBodyTerminal() is true 
 	}
@@ -162,7 +203,7 @@ package com.lushprojects.circuitjs1.client;
 		volts[bodyTerminal] = 0;
 	}
 	String dump() {
-	    return super.dump() + " " + vt + " " + beta;
+	    return super.dump() + " " + vt + " " + beta + " " + rdsOn + " " + rdsVgs + " " + ratedVgs;
 	}
 	int getDumpType() { return 'f'; }
 	final int hs = 16;
@@ -500,7 +541,7 @@ package com.lushprojects.circuitjs1.client;
 	void getFetInfo(String arr[], String n) {
 	    arr[0] = sim.LS(((pnp == -1) ? "p-" : "n-") + n);
 	    arr[0] += " (Vt=" + getVoltageText(pnp*getEffVt());
-	    arr[0] += ", \u03b2=" + beta + ")";
+	    arr[0] += ", \u03b2=" + getShortUnitText(beta, "") + ")";
 	    arr[1] = ((pnp == 1) ? "Ids = " : "Isd = ") + getCurrentText(ids);
 	    arr[2] = "Vgs = " + getVoltageText(volts[0]-volts[pnp == -1 ? 2 : 1]);
 	    arr[3] = ((pnp == 1) ? "Vds = " : "Vsd = ") + getVoltageText(volts[2]-volts[1]);
@@ -527,6 +568,11 @@ package com.lushprojects.circuitjs1.client;
 			return new EditInfo("Threshold Voltage", pnp*vt, .01, 5);
 		if (n == 1)
 			return new EditInfo(EditInfo.makeLink("mosfet-beta.html", "Beta"), beta, .01, 5);
+		if (n == 2)
+			return new EditInfo("Rds(on) (\u03a9) (0 = use Beta above)", rdsOn).disallowSliders();
+		if (n == 3)
+			return new EditInfo("Rds(on) measured at |Vgs| (V)", rdsVgs).disallowSliders();
+		n -= 2;
 		if (n == 2) {
 			EditInfo ei = new EditInfo("", 0, -1, -1);
 			ei.checkbox = new Checkbox("Show Bulk", showBulk());
@@ -559,7 +605,15 @@ package com.lushprojects.circuitjs1.client;
 		if (n == 0)
 			vt = pnp*ei.value;
 		if (n == 1 && ei.value > 0)
-			beta = lastBeta = ei.value;	
+			beta = lastBeta = ei.value;
+		if (n == 2 || n == 3) {
+		    if (n == 2 && ei.value >= 0) rdsOn = ei.value;
+		    if (n == 3 && ei.value > 0) rdsVgs = Math.abs(ei.value);
+		    if (n == 3)
+			betaFromRdsOn();
+		    return;
+		}
+		n -= 2;
 		if (n == 2) {
 		    globalFlags = (!ei.checkbox.getState()) ? (globalFlags|FLAG_HIDE_BULK) :
 				(globalFlags & ~(FLAG_HIDE_BULK|FLAG_DIGITAL));

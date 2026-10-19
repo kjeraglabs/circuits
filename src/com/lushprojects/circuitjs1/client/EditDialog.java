@@ -290,6 +290,17 @@ class EditDialog extends DialogBox  {
 				adj.setSliderValue(ei.value);
 			}
 		}
+		// show values the part worked out itself (e.g. MOSFET beta from Rds(on))
+		for (i = 0; i != einfocount; i++) {
+			EditInfo ei = einfos[i];
+			if (ei.textf == null || ei.text != null)
+			    continue;
+			EditInfo now = getField(i);
+			if (now != null && now.value != ei.value) {
+			    ei.value = now.value;
+			    ei.textf.setText(unitString(ei, now.value));
+			}
+		}
 		cframe.needAnalyze();
 	}
 
