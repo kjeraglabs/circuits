@@ -37,8 +37,10 @@ can be given a max power, max voltage and max current in their edit dialog
 
 All four support component ratings.
 
-**Ratings on active parts.** BJTs are rated on power, Vce and Ic (new ones default to a BC847:
-0.25 W, 45 V, 100 mA); MOSFETs and JFETs on power, Vds and Id (new ones default to a 2N7002:
+**Ratings on active parts.** BJTs are rated on power, Vce (VCEO), Ic, and the reverse junction
+voltages Vcb (VCBO) and Veb (VEBO) (new ones default to a BC847: 0.25 W, 45 V, 100 mA, 50 V, 6 V).
+A BJT can also be given its datasheet Vce(sat) at Ic/Ib = 10; the model's reverse beta is then
+set so it saturates at that voltage (saved after the model name on the `t` line); MOSFETs and JFETs on power, Vds and Id (new ones default to a 2N7002:
 0.35 W, 60 V, 200 mA); op amps on supply span V+ to V-, output current and output-stage power
 (new ones default to 40 V only). A burned transistor either goes open on all pins or shorts
 (BJT: C, B and E together; MOSFET: drain to source); a burned op amp output goes high-impedance

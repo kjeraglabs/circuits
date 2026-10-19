@@ -30,6 +30,8 @@ class TransistorElm extends CircuitElm {
 	// node 2 = emitter
 	int pnp;
 	double beta;
+	// Kjerag Labs: extra limits (0 = not rated / model default)
+	double ratedVcb, ratedVeb, vceSat;
 //	double fgain, inv_fgain;
 	double gmin;
 	    String modelName;
@@ -45,6 +47,8 @@ class TransistorElm extends CircuitElm {
 	    ratedPower = .25;
 	    ratedVoltage = 45;
 	    ratedCurrent = .1;
+	    ratedVcb = 50;
+	    ratedVeb = 6;
 	    modelName = lastModelName;
 	    setup();
 	}
@@ -63,6 +67,11 @@ class TransistorElm extends CircuitElm {
 	    } catch (Exception e) {
 		modelName = "default";
 	    }
+	    try {
+		ratedVcb = new Double(st.nextToken()).doubleValue();
+		ratedVeb = new Double(st.nextToken()).doubleValue();
+		vceSat = new Double(st.nextToken()).doubleValue();
+	    } catch (Exception e) {}
 	    setup();
 	}
 	void setup() {
@@ -85,7 +94,53 @@ class TransistorElm extends CircuitElm {
 	double ratingCurrent() { return ic; }
 	String ratingVoltageName() { return "Vce"; }
 	String ratingCurrentName() { return "Ic"; }
-	String ratingVoltageLabel() { return "Max Vce (V)"; }
+	String ratingVoltageLabel() { return "Max Vce, VCEO (V)"; }
+
+	boolean hasRatings() { return super.hasRatings() || ratedVcb > 0 || ratedVeb > 0; }
+
+	// reverse-bias voltages across the junctions (positive = reverse biased)
+	double reverseVcb() { return pnp*(volts[1]-volts[0]); }
+	double reverseVeb() { return pnp*(volts[2]-volts[0]); }
+
+	double extraRatingStress() {
+	    double s = 0;
+	    if (ratedVcb > 0 && reverseVcb()/ratedVcb > s) {
+		s = reverseVcb()/ratedVcb; extraRatingName = "Vcb";
+	    }
+	    if (ratedVeb > 0 && reverseVeb()/ratedVeb > s) {
+		s = reverseVeb()/ratedVeb; extraRatingName = "Veb";
+	    }
+	    return s;
+	}
+
+	// rating fields: power, Vce, Ic, then Vcb and Veb, then the common ones
+	EditInfo getRatingEditInfo(int n) {
+	    if (n == 3)
+		return new EditInfo("Max Vcb, VCBO (V)", ratedVcb).disallowSliders();
+	    if (n == 4)
+		return new EditInfo("Max Veb, VEBO (V)", ratedVeb).disallowSliders();
+	    return super.getRatingEditInfo(n < 3 ? n : n-2);
+	}
+
+	void setRatingEditValue(int n, EditInfo ei) {
+	    if (n == 3 && ei.value >= 0) { ratedVcb = ei.value; resetRating(); return; }
+	    if (n == 4 && ei.value >= 0) { ratedVeb = ei.value; resetRating(); return; }
+	    super.setRatingEditValue(n < 3 ? n : n-2, ei);
+	}
+
+	// Reverse beta that makes the model saturate at vceSat with Ic/Ib = 10
+	// (the usual datasheet condition), from the Ebers-Moll relation
+	// Vce(sat) = Vt ln((1 + (Ic/Ib + 1)/BR) / (1 - Ic/(Ib BF))).
+	// Without a Vce(sat) setting the model's own reverse beta is used.
+	double getEffBetaR() {
+	    if (vceSat <= 0)
+		return model.betaR;
+	    double bf = Math.max(getEffBeta(), 11);
+	    double d = Math.exp(vceSat/vt)*(1 - 10/bf) - 1;
+	    if (d <= 0)
+		return model.betaR;
+	    return Math.max(1e-6, Math.min(1000, 11/d));
+	}
 	String ratingCurrentLabel() { return "Max collector current (A)"; }
 
 	// burned: open leaves all pins open, short ties collector, emitter and base together
@@ -117,7 +172,8 @@ class TransistorElm extends CircuitElm {
 	int getDumpType() { return 't'; }
 	String dump() {
 	    return super.dump() + " " + pnp + " " + (volts[0]-volts[1]) + " " +
-		(volts[0]-volts[2]) + " " + beta + " " + CustomLogicModel.escape(modelName);
+		(volts[0]-volts[2]) + " " + beta + " " + CustomLogicModel.escape(modelName) +
+		" " + ratedVcb + " " + ratedVeb + " " + vceSat;
 	}
 	
 	    public void updateModels() {
@@ -249,6 +305,7 @@ class TransistorElm extends CircuitElm {
 	}
 	void doStep() {
 	    double effBeta = getEffBeta();
+	    double effBetaR = getEffBetaR();
 	    double vbc = pnp*(volts[0]-volts[1]); // typically negative
 	    double vbe = pnp*(volts[0]-volts[2]); // typically positive
 	    if (Math.abs(vbc-lastvbc) > .01 || // .01
@@ -353,8 +410,8 @@ class TransistorElm extends CircuitElm {
             /*
              *   determine dc incremental conductances
              */
-            cc=cc+(cex-cbc)/qb-cbc/model.betaR-cbcn;
-            double cb=cbe/effBeta+cben+cbc/model.betaR+cbcn;
+            cc=cc+(cex-cbc)/qb-cbc/effBetaR-cbcn;
+            double cb=cbe/effBeta+cben+cbc/effBetaR+cbcn;
             
             // get currents
 	    ic = pnp*cc;
@@ -370,7 +427,7 @@ class TransistorElm extends CircuitElm {
             }
             if(gx != 0) gx=1/gx;*/
             double gpi=gbe/effBeta+gben;
-            double gmu=gbc/model.betaR+gbcn;
+            double gmu=gbc/effBetaR+gbcn;
             double go=(gbc+(cex-cbc)*dqbdvc/qb)/qb;
             double gm=(gex-(cex-cbc)*dqbdve/qb)/qb-go;
 
@@ -458,6 +515,9 @@ class TransistorElm extends CircuitElm {
 	    if (n == 0)
 		return new EditInfo("Beta/hFE", beta, 10, 1000).
 		    setDimensionless();
+	    if (n == 1)
+		return new EditInfo("Vce(sat) at Ic/Ib = 10 (V) (0 = model default)", vceSat).disallowSliders();
+	    n--;
 	    if (n == 1) {
 		EditInfo ei = new EditInfo("", 0, -1, -1);
 		ei.checkbox = new Checkbox("Swap E/C", (flags & FLAG_FLIP) != 0);
@@ -503,6 +563,12 @@ class TransistorElm extends CircuitElm {
 		beta = ei.value;
 		setup();
 	    }
+	    if (n == 1) {
+		if (ei.value >= 0 && ei.value < 2)
+		    vceSat = ei.value;
+		return;
+	    }
+	    n--;
 	    if (n == 1) {
 		if (ei.checkbox.getState())
 		    flags |= FLAG_FLIP;

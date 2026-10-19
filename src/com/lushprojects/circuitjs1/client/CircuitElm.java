@@ -261,6 +261,11 @@ public abstract class CircuitElm implements Editable {
     String ratingVoltageLabel() { return "Max voltage (V)"; }
     String ratingCurrentLabel() { return "Max current (A)"; }
 
+    // parts with more voltage limits (e.g. Vcb and Veb on a BJT) return the
+    // highest of their stresses here and set extraRatingName
+    double extraRatingStress() { return 0; }
+    String extraRatingName;
+
     // current through a failed element (replaced by getFailResistance())
     void calculateFailedCurrent() {
 	current = (volts[0]-(getPostCount() > 1 ? volts[1] : 0))/getFailResistance();
@@ -292,6 +297,10 @@ public abstract class CircuitElm implements Editable {
 	}
 	if (ratedCurrent > 0 && filtCurrent/ratedCurrent > s) {
 	    s = filtCurrent/ratedCurrent; why = ratingCurrentName();
+	}
+	double xs = extraRatingStress();
+	if (xs > s) {
+	    s = xs; why = extraRatingName;
 	}
 	stress = s;
 	if (s > 1 && sim.breakingEnabled) {
