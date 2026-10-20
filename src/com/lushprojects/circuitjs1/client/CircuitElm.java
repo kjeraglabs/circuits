@@ -265,6 +265,7 @@ public abstract class CircuitElm implements Editable {
     // highest of their stresses here and set extraRatingName
     double extraRatingStress() { return 0; }
     String extraRatingName;
+    double extraRatingValue;   // the voltage behind extraRatingStress(), for messages
 
     // ---------------------------------------------------------------
     // Transistor metrics (Kjerag Labs addition): with the metrics toggle on,
@@ -349,24 +350,26 @@ public abstract class CircuitElm implements Editable {
 	filtPower   += (Math.abs(getPower())   - filtPower)*a;
 	filtCurrent += (Math.abs(ratingCurrent()) - filtCurrent)*a;
 	double s = 0;
-	String why = null;
+	String why = null, val = null;
 	if (ratedPower > 0 && filtPower/ratedPower > s) {
-	    s = filtPower/ratedPower; why = "power";
+	    s = filtPower/ratedPower; why = "power"; val = getShortUnitText(filtPower, "W");
 	}
 	if (ratedVoltage > 0 && Math.abs(ratingVoltage())/ratedVoltage > s) {
 	    s = Math.abs(ratingVoltage())/ratedVoltage; why = ratingVoltageName();
+	    val = getShortUnitText(ratingVoltage(), "V");
 	}
 	if (ratedCurrent > 0 && filtCurrent/ratedCurrent > s) {
-	    s = filtCurrent/ratedCurrent; why = ratingCurrentName();
+	    s = filtCurrent/ratedCurrent; why = ratingCurrentName(); val = getShortUnitText(filtCurrent, "A");
 	}
 	double xs = extraRatingStress();
 	if (xs > s) {
-	    s = xs; why = extraRatingName;
+	    s = xs; why = extraRatingName; val = getShortUnitText(extraRatingValue, "V");
 	}
 	stress = s;
 	if (s > 1 && sim.breakingEnabled) {
 	    failed = true;
-	    failReason = why;
+	    // keep the value that did it: once burned the part's readings change
+	    failReason = why + " " + val;
 	    return true;
 	}
 	return false;

@@ -84,6 +84,7 @@ package com.lushprojects.circuitjs1.client;
 	    if (ratedVgs <= 0)
 		return 0;
 	    extraRatingName = "Vgs";
+	    extraRatingValue = volts[0]-volts[1];
 	    return Math.abs(volts[0]-volts[1])/ratedVgs;
 	}
 

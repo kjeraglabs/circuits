@@ -105,10 +105,10 @@ class TransistorElm extends CircuitElm {
 	double extraRatingStress() {
 	    double s = 0;
 	    if (ratedVcb > 0 && reverseVcb()/ratedVcb > s) {
-		s = reverseVcb()/ratedVcb; extraRatingName = "Vcb";
+		s = reverseVcb()/ratedVcb; extraRatingName = "Vcb"; extraRatingValue = volts[1]-volts[0];
 	    }
 	    if (ratedVeb > 0 && reverseVeb()/ratedVeb > s) {
-		s = reverseVeb()/ratedVeb; extraRatingName = "Veb";
+		s = reverseVeb()/ratedVeb; extraRatingName = "Veb"; extraRatingValue = volts[2]-volts[0];
 	    }
 	    return s;
 	}
